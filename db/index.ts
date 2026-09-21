@@ -1,22 +1,27 @@
-import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import { serverEnv } from "@/lib/env";
 import * as schema from "./schema";
 
-export type Db = PostgresJsDatabase<typeof schema>;
+export type Db = NodePgDatabase<typeof schema>;
 
 // Lazy singleton: nothing connects (and no env is read) at module import,
-// so `next build` collects page data without credentials. postgres.js pools
-// internally; `prepare: false` is required for Supabase's transaction pooler.
+// so `next build` collects page data without credentials.
+// Driver note: node-postgres (pg), not postgres.js — postgres.js deadlocked
+// under concurrent queries in the Next dev server (backend stuck in
+// ClientRead, client never draining the socket).
 const globalForDb = globalThis as unknown as { dbInstance?: Db };
 
 function getDb(): Db {
   if (!globalForDb.dbInstance) {
-    const client = postgres(serverEnv().DATABASE_URL, {
-      prepare: false,
+    const pool = new Pool({
+      connectionString: serverEnv().DATABASE_URL,
       max: 5,
+      idleTimeoutMillis: 20_000,
+      connectionTimeoutMillis: 10_000,
+      ssl: { rejectUnauthorized: false }, // Supabase pooler TLS
     });
-    globalForDb.dbInstance = drizzle(client, { schema });
+    globalForDb.dbInstance = drizzle(pool, { schema });
   }
   return globalForDb.dbInstance;
 }

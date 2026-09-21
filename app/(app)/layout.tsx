@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/board", label: "Board", phase: 1 },
+  { href: "/board", label: "Board" },
   { href: "/meetings", label: "Meetings", phase: 2 },
   { href: "/decisions", label: "Decisions", phase: 4 },
   { href: "/archive", label: "Archive", phase: 2 },

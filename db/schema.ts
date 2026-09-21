@@ -1,4 +1,16 @@
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  date,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 // ---------------------------------------------------------------------------
 // Auth tables (Better Auth core schema + our additional fields on user)
@@ -90,4 +102,151 @@ export const invitation = pgTable(
   (t) => [index("invitation_email_idx").on(t.email)],
 );
 
-export const schema = { user, session, account, verification, invitation };
+// ---------------------------------------------------------------------------
+// Board configuration (admin-editable; task status is an FK to a column row,
+// not an enum, so columns stay renameable — lifecycle rules key off the
+// isBlocked / isDone flags, never off column names. FR-1)
+// ---------------------------------------------------------------------------
+
+export const boardColumn = pgTable("board_column", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  position: integer("position").notNull(),
+  wipHint: integer("wip_hint"), // soft per-person warning threshold, null = off
+  isBlocked: boolean("is_blocked").notNull().default(false),
+  isDone: boolean("is_done").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const project = pgTable("project", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  color: integer("color").notNull().default(1), // index into --project-1…10 tokens
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// User-nameable task groups; external types require requester fields (FR-43/44)
+export const taskType = pgTable("task_type", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("internal"), // token key: --type-<color>
+  icon: text("icon").notNull().default("wrench"), // lucide icon name
+  isExternal: boolean("is_external").notNull().default(false),
+  position: integer("position").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+});
+
+// ---------------------------------------------------------------------------
+// Tasks (FR-2). displayNumber renders as "EH-42". lastActivityAt drives the
+// stale badge (FR-6); doneAt drives auto-archive (FR-5) — both computed at
+// read time, no background jobs.
+// ---------------------------------------------------------------------------
+
+export const task = pgTable(
+  "task",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    displayNumber: integer("display_number").generatedAlwaysAsIdentity(),
+    title: text("title").notNull(),
+    description: text("description"), // markdown, checklists included
+    columnId: uuid("column_id")
+      .notNull()
+      .references(() => boardColumn.id),
+    position: doublePrecision("position").notNull().default(0), // fractional ordering inside a column
+    assigneeId: text("assignee_id")
+      .notNull()
+      .references(() => user.id),
+    projectId: uuid("project_id").references(() => project.id),
+    typeId: uuid("type_id")
+      .notNull()
+      .references(() => taskType.id),
+    requesterName: text("requester_name"), // required by validation for external types
+    requesterDepartment: text("requester_department"),
+    priority: text("priority").notNull().default("p2"), // p1 | p2 | p3
+    estimate: text("estimate"), // s | m | l | xl
+    dueDate: date("due_date"),
+    blockedReason: text("blocked_reason"), // required when in a blocked column (FR-4)
+    labels: text("labels").array().notNull().default([]),
+    createdByType: text("created_by_type").notNull().default("user"), // user | ai (FR-32)
+    createdById: text("created_by_id").notNull(),
+    originMeetingId: uuid("origin_meeting_id"), // FK added with meetings in phase 2
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("task_column_position_idx").on(t.columnId, t.position),
+    index("task_assignee_idx").on(t.assigneeId),
+    index("task_project_idx").on(t.projectId),
+    index("task_type_idx").on(t.typeId),
+  ],
+);
+
+export const taskComment = pgTable(
+  "task_comment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => task.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id),
+    parentId: uuid("parent_id"), // one-level threading
+    body: text("body").notNull(),
+    mentions: text("mentions").array().notNull().default([]), // mentioned user ids
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("task_comment_task_idx").on(t.taskId, t.createdAt)],
+);
+
+// Append-only audit trail; written in the same transaction as each mutation
+// (FR-7, FR-32). Also the data source for the phase-4 analytics module.
+export const activityLog = pgTable(
+  "activity_log",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    entityType: text("entity_type").notNull(), // task | column | project | task_type | …
+    entityId: text("entity_id").notNull(),
+    action: text("action").notNull(), // created | updated | moved | commented | deleted | …
+    actorType: text("actor_type").notNull().default("user"), // user | ai
+    actorId: text("actor_id").notNull(),
+    diff: jsonb("diff"), // { field: { from, to } } — only what changed
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("activity_entity_idx").on(t.entityType, t.entityId, t.createdAt),
+  ],
+);
+
+export const schema = {
+  user,
+  session,
+  account,
+  verification,
+  invitation,
+  boardColumn,
+  project,
+  taskType,
+  task,
+  taskComment,
+  activityLog,
+};

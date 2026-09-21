@@ -1,6 +1,7 @@
 import { desc, isNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { AdminTabs } from "@/components/shell/admin-tabs";
 import { db } from "@/db";
 import { invitation, user } from "@/db/schema";
 import { hasPermission } from "@/lib/permissions";
@@ -23,6 +24,7 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <AdminTabs active="users" />
       <h1 className="font-semibold text-foreground text-xl">Users</h1>
 
       <section className="rounded-lg border border-border bg-card">
