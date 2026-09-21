@@ -132,6 +132,8 @@ A Kanban board is the single source of truth for all department work; objectives
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | Title | text | yes | Imperative, e.g. "Finish CAN reader for Kässbohrer unit" |
+| Type | select | yes | From admin-managed task-type list (see below); defaults to "Internal" |
+| Requester | text + department | only for external types | Who asked and from where, e.g. "G. Beridze — Service" |
 | Description | rich text | no | Markdown; checklists for subtasks |
 | Assignee | user | yes | Single owner — no shared tasks |
 | Project | select | no | From admin-managed project list |
@@ -142,6 +144,10 @@ A Kanban board is the single source of truth for all department work; objectives
 | Blocked reason | text | only in Blocked | Forces naming the blocker |
 | Origin | auto | — | "Manual" or link to the source meeting |
 | Labels | multi-select | no | e.g. hardware, firmware, app, CAD, AI, admin |
+
+**Task types**
+
+Tasks carry a type from an admin-managed list — users name and manage the groups themselves. Seed defaults: Internal, Service request, Print job, Repair, Admin. Each type has a name, color, icon, and an "external" flag; external types require the requester fields, so every favor done for another department is documented and countable. External requests are logged by the team (no outside access in v1). Types are a first-class analytics dimension: "how much of our week goes to service requests" must be answerable in one click.
 
 **Task lifecycle rules**
 
@@ -287,6 +293,8 @@ The dashboard answers "how are we doing?" in one screen; the archive answers "wh
 
 - Weekly summary: auto-drafted from the week's meetings + board activity, editable before sharing; export as PDF or shareable link.
 - Monthly/quarterly rollups: objectives hit rate, completed tasks by project, where time actually went vs. planned — the evidence base for the hiring case.
+
+**Analytics dashboard.** A separate analytics screen (admin + members; key charts also feed the boss view) answering "where does our time actually go" over selectable ranges (week / month / quarter): throughput (tasks completed per week), completed tasks by project, by task type, and by assignee; external-request volume by requesting department; time-in-column analysis (especially days spent Blocked); objectives hit rate; overdue/stale trends; AI pipeline stats (acceptance rate, cost). All computed from board data + activity log with plain SQL — no third-party analytics service. This is the evidence base for the hiring case and for showing management what external departments consume.
 
 **Decision log.** Every AI-extracted decision (and manually added ones) in one chronological, searchable list: date, decision, context, source meeting link. This is the department's institutional memory — the answer to "why did we choose MQTTS?" six months later, and the onboarding document for hire #3.
 
@@ -472,6 +480,14 @@ Each requirement is a testable statement; the phase column maps to §12. "Shall"
 | FR-36 | One-click JSON export of all tasks, meetings, decisions; weekly automated DB backup | 4 |
 | FR-37 | All UI strings in one messages file (English at launch, Georgian addable); extraction test cases include mixed Georgian/English notes | 2–3 |
 | FR-38 | Total running cost ≤ $10/month at 2–3 users | all |
+
+**Task types & analytics**
+
+| ID | Requirement | Phase |
+| --- | --- | --- |
+| FR-43 | Tasks carry a type from an admin-managed task-type list (name, color, icon, external flag); seed defaults: Internal, Service request, Print job, Repair, Admin; type is required, defaulting to Internal | 1 |
+| FR-44 | Types flagged "external" require requester name + department at creation; external tasks are team-logged (no outside access in v1) and countable by requesting department | 1 |
+| FR-45 | Analytics dashboard with range selector (week/month/quarter): throughput, completions by project/type/assignee, external-request volume by department, time-in-column incl. days Blocked, objectives hit rate, overdue/stale trends, AI acceptance rate + cost; computed via SQL from board + activity log | 4 (deep cuts: 5) |
 
 ### Sources
 

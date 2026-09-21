@@ -16,13 +16,13 @@ You are the lead product designer for **Engineering Hub**, an internal web app f
 ## Design system deliverables
 
 1. **Tokens:** color palette (light + dark mode, dark is first-class — workshop evenings), typography scale (a highly legible UI sans; monospace accents for IDs/timestamps welcome), spacing, radius, elevation. Must map cleanly onto Tailwind CSS variables / shadcn-ui theming (`--background`, `--primary`, etc.).
-- Semantic colors needed: 6 board columns (Backlog, This week, In progress, Blocked, Review, Done — Blocked must be the loudest thing on screen), priorities P1/P2/P3, objective states (Planned/Active/Achieved/Missed/Rolled over), stale + overdue badges, AI-origin marker, per-project accent colors (admin-assignable, ~10 distinguishable hues).
-2. **Core components:** task card (compact board variant + expanded detail sheet), column header with count + WIP hint, objective progress bar ("3/5 done") pinned above the board, meeting-form question blocks (short text, long text, per-person repeat, checklist, auto-loaded context card), agenda-suggestion chip (insert ✓ / dismiss ✕), clarification Q&A batch, proposal diff row (accept / edit / reject), confidence indicator, activity-log line, comment thread with @mention, empty states, toasts.
+- Semantic colors needed: 6 board columns (Backlog, This week, In progress, Blocked, Review, Done — Blocked must be the loudest thing on screen), priorities P1/P2/P3, objective states (Planned/Active/Achieved/Missed/Rolled over), stale + overdue badges, AI-origin marker, per-project accent colors (admin-assignable, ~10 distinguishable hues), task-type chips (user-named groups like Internal / Service request / Print job — color + icon, admin-assignable; external types get a subtle "from outside" cue such as an arrow-in icon).
+2. **Core components:** task card (compact board variant + expanded detail sheet; both show the task-type chip, and external tasks show requester + department, e.g. "Service · G. Beridze"), column header with count + WIP hint, objective progress bar ("3/5 done") pinned above the board, meeting-form question blocks (short text, long text, per-person repeat, checklist, auto-loaded context card), agenda-suggestion chip (insert ✓ / dismiss ✕), clarification Q&A batch, proposal diff row (accept / edit / reject), confidence indicator, activity-log line, comment thread with @mention, empty states, toasts.
 3. **App shell:** desktop = slim icon sidebar (Dashboard, Board, Meetings, Decisions, Archive, Admin) + topbar with global search (⌘K) and "next meeting" indicator. Mobile = bottom tab bar with the same five primary destinations; FAB or equivalent for "new task / start meeting".
 
 ## Screens to design (high-fidelity, desktop 1440 + mobile 390)
 
-1. **Board** — 6-column Kanban, active weekly objectives pinned above as slim progress rows, filter bar, swimlane toggle. Show: a blocked card with reason, an overdue red badge, a stale badge, an AI-origin badge, drag state.
+1. **Board** — 6-column Kanban, active weekly objectives pinned above as slim progress rows, filter bar, swimlane toggle (by project, assignee, or task type). Show: a blocked card with reason, an overdue red badge, a stale badge, an AI-origin badge, an external service-request card with requester shown, drag state.
 2. **Task detail** — side sheet (desktop) / full screen (mobile): all fields, checklist in description, activity log, comments, origin-meeting link with source quote.
 3. **Meeting form (live)** — daily-sync example: per-person question groups, auto-loaded context cards ("your In-progress cards — confirm or adjust"), agenda-suggestion chips at top, free-text "Additional notes" at the end, autosave indicator, presence of the second participant, Submit.
 4. **AI processing → clarification** — post-submit state: progress ("Extracting… ~20 s"), then a batch of up to 5 clarification questions, each answerable or skippable.
@@ -31,6 +31,7 @@ You are the lead product designer for **Engineering Hub**, an internal web app f
 7. **Dashboard (boss / viewer)** — simplified, read-only: quarter progress, weekly objectives, delivered-recently feed, decisions awaiting them. Calm, executive, zero clutter.
 8. **Meetings hub** — upcoming (with overdue-meeting state) + past meetings list; a confirmed meeting record page (immutable, shows what the AI extracted and what was applied/rejected).
 9. **Decision log** — chronological searchable list, each entry: decision, context, date, source-meeting link.
+10. **Analytics** — range selector (week / month / quarter) + a grid of charts: throughput per week (bar), completed tasks split by project / task type / assignee (switchable), external-request volume by requesting department, days-spent-blocked, objectives hit rate, AI acceptance rate + cost. Design for scannability — the owner walks into a meeting with this screen; every chart needs a one-line headline stat. Charts render with Recharts, so stay within standard bar/line/donut/stacked forms.
 
 ## Constraints
 
@@ -43,8 +44,8 @@ You are the lead product designer for **Engineering Hub**, an internal web app f
 ## Output format
 
 1. A design-tokens spec (colors light+dark, type scale, spacing, radii) as a table or JSON mapped to shadcn/Tailwind CSS variable names.
-2. High-fidelity mockups of the 9 screens (desktop + mobile for screens 1, 3, 5, 6, 7; desktop-only acceptable for the rest), delivered as HTML/CSS mockups or Figma frames — HTML preferred so the tokens are directly reusable.
+2. High-fidelity mockups of the 10 screens (desktop + mobile for screens 1, 3, 5, 6, 7; desktop-only acceptable for the rest), delivered as HTML/CSS mockups or Figma frames — HTML preferred so the tokens are directly reusable.
 3. A short rationale note per screen (3–5 sentences: key decisions, what to test).
 4. The component sheet from "Core components" rendered in both themes.
 
-Prioritize in this order if scope must be cut: tokens → board → proposal screen → meeting form → dashboards → the rest.
+Prioritize in this order if scope must be cut: tokens → board → proposal screen → meeting form → dashboards → analytics → the rest.

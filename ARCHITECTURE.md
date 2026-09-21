@@ -63,6 +63,7 @@ Data flow for the core loop: meeting form (autosaved to Postgres) → submit →
     /objectives
     /meetings        list, [id] form, [id]/review proposal screen
     /dashboard       role-aware home (member vs viewer variants)
+    /analytics       charts: throughput, by type/project/person, blocked time
     /decisions
     /archive         global search
     /admin           users, templates, columns, projects, AI settings
@@ -102,6 +103,7 @@ DECISIONS.md · README.md · ARCHITECTURE.md
 
 Schema follows §9 with these implementation decisions:
 
+- `task_types` is an admin-managed table (name, color, icon, is_external, position, active) — user-nameable groups, seeded with Internal / Service request / Print job / Repair / Admin (FR-43). Tasks carry `task_type_id` (required, default Internal) plus nullable `requester_name` / `requester_department`, enforced non-null by validation when the type is external (FR-44). External requests are team-logged in v1; the shape (requester fields separate from assignee, type as FK) means a token-based intake form could be added later without migration.
 - `board_columns` is a table (position, name, wip_hint, is_done_column, is_blocked_column) — task status is an FK to it, keeping columns admin-editable. The `is_blocked_column`/`is_done_column` flags are what lifecycle rules key on, so renaming columns never breaks rules.
 - `meeting_templates` are versioned as immutable rows: editing a used template inserts a new version row; `meetings.template_version_id` pins the render forever (FR-13).
 - `activity_log` is append-only, written inside the same transaction as the mutation it records, with `actor_type: 'user' | 'ai'` + `actor_id` (FR-32). AI writes also stamp `confirmed_by`.
@@ -150,6 +152,16 @@ Implementation rules:
 - **Dispatch:** `/lib/notifications.ts` exposes `notify(userId, event)`; channels are pluggable. Phase 4 ships in-app (bell + unread) and WhatsApp via the Meta Business Cloud API (pre-approved utility templates; each user links their number once in settings). Every reminder carries a deep link to the pre-filled form. Meta business verification is a phase-4 prerequisite — start it early; in-app ships regardless (ADR-006).
 - Agenda suggestions (§6.2) are pure SQL in `/lib/queries/suggestions.ts` — deterministic, instant, no AI (FR-41).
 
+## 7b. Analytics
+
+No analytics vendor — everything derives from data we already write (FR-45, ADR-011):
+
+- **Event source:** the append-only `activity_log` (every move carries actor + timestamp) plus a `task_column_transitions` view gives time-in-column, days-blocked, and throughput without any extra bookkeeping.
+- **Queries:** SQL aggregates in `/lib/queries/analytics.ts`, computed on request in Server Components, cached with `revalidate` (data volume at this scale is trivial; no pre-aggregation tables until they're needed).
+- **Charts:** Recharts inside shadcn's chart wrapper; range selector (week/month/quarter) in URL params like every other filter.
+- **Cuts shipped phase 4:** throughput/week, completions by project + task type + assignee, external-request volume by department, days-blocked, objectives hit rate, AI acceptance + cost. Phase 5 adds trend lines (overdue/stale over time, estimate accuracy).
+- Selected headline charts are re-used on the boss dashboard and in the weekly PDF summary — one query layer, three consumers.
+
 ## 8. Security
 
 - Invite-only: `invitations` table (email, role, token, expiry); sign-up only completes against a valid token. No public registration path exists.
@@ -173,8 +185,8 @@ Implementation rules:
 | Phase | Architecture surface activated |
 | --- | --- |
 | 0 | Repo, CI, Supabase project, Drizzle + migrations, Better Auth + invites, Sentry, skeleton shell |
-| 1 | Board module, activity log, Realtime board channel, optimistic DnD, list/my-tasks views |
+| 1 | Board module incl. task types + external-requester fields, activity log, Realtime board channel, optimistic DnD, list/my-tasks views |
 | 2 | Objectives, template engine + seed templates, meeting forms + autosave, agenda suggestions (core set), search |
 | 3 | `/ai` module, extraction jobs, clarification + proposal screens, origin badges, prompt versioning |
-| 4 | Dashboards, viewer role surfaces, pg_cron reminders + Telegram, weekly summary + PDF + token links, decision log, JSON export |
+| 4 | Dashboards, analytics v1, viewer role surfaces, pg_cron reminders + WhatsApp, weekly summary + PDF + token links, decision log, JSON export |
 | 5 | Realtime form co-editing, PWA manifest + install, quarterly layer, template editor UI, Georgian locale |

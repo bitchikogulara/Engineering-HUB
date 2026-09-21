@@ -60,3 +60,17 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 **Boss access:** Viewer login arrives with the phase-4 boss dashboard; until then the boss gets token-based summary links only.
 **Daily sync:** stays a live meeting form as the default. The meeting-type model already carries a mode field conceptually — an async check-in variant (each person fills their block before a deadline, AI processes when all have submitted) will be added later as a per-occurrence choice, not a replacement. Build meeting records so a meeting can have per-participant submission timestamps to keep that door open.
 **Scale:** design for N users, not 2 — per-person form sections, swimlanes, dashboards, and the permission model must not hard-code team size. The spec's "works for 2, nothing breaks at 10" is a floor, not a ceiling.
+
+## ADR-010 — Task types as a first-class, user-manageable dimension
+
+**Status:** accepted (owner request, 2026-09-21)
+**Context:** Work arrives from outside the department (service dept print jobs, repairs) and must be documented and countable, not lost among internal tasks. Labels are too loose (multi-select, no requester data); projects mean something else.
+**Decision:** `task_types` table, admin/user-manageable (name, color, icon, `is_external` flag), seeded with Internal / Service request / Print job / Repair / Admin. `task_type_id` required on every task (default Internal). External types require requester name + department. Intake is team-logged in v1 — owner explicitly chose no outside access; the model (requester distinct from assignee, type as FK) leaves a later token-based intake form a pure addition, not a migration.
+**Consequence:** New FR-43/FR-44 in the spec, phase 1. Task type becomes a filter, an optional swimlane grouping, and a core analytics dimension.
+
+## ADR-011 — Analytics: in-app SQL over activity log, no vendor
+
+**Status:** accepted (owner request, 2026-09-21)
+**Context:** Owner wants an analytics dashboard ("where does our time go", external-request load, throughput). Data volume is tiny; a product-analytics SaaS would add cost, an external data flow for internal business info, and nothing we can't compute ourselves.
+**Decision:** All analytics are SQL aggregates over tasks + the append-only `activity_log` (which already timestamps every column move, giving time-in-column and days-blocked for free), exposed via `/lib/queries/analytics.ts` and rendered with Recharts. Range selection in URL params. Phase 4 ships the core cuts (FR-45); phase 5 adds trends. Headline charts are reused by the boss dashboard and weekly PDF.
+**Consequence:** Zero added vendors or cost; analytics correctness depends on activity-log completeness, which FR-32 already mandates and tests cover.
