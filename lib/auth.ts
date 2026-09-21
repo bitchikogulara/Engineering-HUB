@@ -52,10 +52,26 @@ function githubProvider() {
   };
 }
 
+/**
+ * Origins allowed to talk to the auth API besides BETTER_AUTH_URL itself.
+ * On Vercel, the same deployment is reachable via several generated URLs
+ * (per-deployment link, project alias, branch URL); Vercel exposes them as
+ * system env vars, so trusting them never widens beyond our own project.
+ */
+function trustedOrigins(): string[] {
+  const hosts = [
+    process.env.VERCEL_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  ].filter((h): h is string => Boolean(h));
+  return [serverEnv().BETTER_AUTH_URL, ...hosts.map((h) => `https://${h}`)];
+}
+
 function createAuth() {
   return betterAuth({
     baseURL: serverEnv().BETTER_AUTH_URL,
     secret: serverEnv().BETTER_AUTH_SECRET,
+    trustedOrigins: trustedOrigins(),
     database: drizzleAdapter(db, { provider: "pg", schema }),
     emailAndPassword: {
       enabled: true,
