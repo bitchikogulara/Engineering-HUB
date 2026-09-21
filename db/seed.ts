@@ -80,7 +80,28 @@ async function main() {
     console.log("seeded projects");
   }
 
-  // Meeting templates seed arrives with phase 2.
+  const [{ value: templates }] = await db
+    .select({ value: count() })
+    .from(schema.meetingTemplate);
+  if (templates === 0) {
+    const { TEMPLATE_SEEDS } = await import("./seed-templates");
+    const { randomUUID } = await import("node:crypto");
+    await db.insert(schema.meetingTemplate).values(
+      TEMPLATE_SEEDS.map((t) => ({
+        baseId: randomUUID(),
+        version: 1,
+        name: t.name,
+        cadence: t.cadence,
+        durationMinutes: t.durationMinutes,
+        participants: t.participants,
+        sections: t.sections,
+        agendaRules: t.agendaRules,
+        extractionInstructions: t.extractionInstructions,
+      })),
+    );
+    console.log("seeded meeting templates");
+  }
+
   await client.end();
   console.log("seed complete");
 }

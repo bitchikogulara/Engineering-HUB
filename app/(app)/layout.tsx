@@ -6,9 +6,10 @@ import { requireSession } from "@/lib/session";
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/board", label: "Board" },
-  { href: "/meetings", label: "Meetings", phase: 2 },
+  { href: "/objectives", label: "Objectives" },
+  { href: "/meetings", label: "Meetings" },
   { href: "/decisions", label: "Decisions", phase: 4 },
-  { href: "/archive", label: "Archive", phase: 2 },
+  { href: "/archive", label: "Archive" },
 ] as const;
 
 export default async function AppLayout({

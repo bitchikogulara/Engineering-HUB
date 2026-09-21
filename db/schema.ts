@@ -162,6 +162,9 @@ export const task = pgTable(
       .notNull()
       .references(() => user.id),
     projectId: uuid("project_id").references(() => project.id),
+    objectiveId: uuid("objective_id").references(() => objective.id, {
+      onDelete: "set null",
+    }),
     typeId: uuid("type_id")
       .notNull()
       .references(() => taskType.id),
@@ -174,7 +177,7 @@ export const task = pgTable(
     labels: text("labels").array().notNull().default([]),
     createdByType: text("created_by_type").notNull().default("user"), // user | ai (FR-32)
     createdById: text("created_by_id").notNull(),
-    originMeetingId: uuid("origin_meeting_id"), // FK added with meetings in phase 2
+    originMeetingId: uuid("origin_meeting_id").references(() => meeting.id),
     doneAt: timestamp("done_at", { withTimezone: true }),
     lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
       .notNull()
@@ -214,6 +217,105 @@ export const taskComment = pgTable(
   (t) => [index("task_comment_task_idx").on(t.taskId, t.createdAt)],
 );
 
+// ---------------------------------------------------------------------------
+// Objectives (FR-8): a named weekly outcome with an owner and linked tasks.
+// Progress is computed from linked tasks at read time.
+// ---------------------------------------------------------------------------
+
+export const objective = pgTable(
+  "objective",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    weekStart: date("week_start").notNull(), // Monday of the objective's week
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id),
+    state: text("state").notNull().default("planned"), // planned|active|achieved|missed|rolled
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("objective_week_idx").on(t.weekStart, t.state)],
+);
+
+// ---------------------------------------------------------------------------
+// Meeting templates (FR-12/13/39): templates are data. Each row is one
+// immutable VERSION; rows sharing baseId are the same template over time.
+// Sections/questions live in JSONB so admins can evolve them without code.
+// ---------------------------------------------------------------------------
+
+export const meetingTemplate = pgTable(
+  "meeting_template",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    baseId: uuid("base_id").notNull(), // stable identity across versions
+    version: integer("version").notNull().default(1),
+    name: text("name").notNull(),
+    cadence: text("cadence"), // human-readable now; RRULE in phase 4
+    durationMinutes: integer("duration_minutes"),
+    participants: text("participants"), // e.g. "Whole team", "Head + boss"
+    reminderOffsets: integer("reminder_offsets")
+      .array()
+      .notNull()
+      .default([15]),
+    sections: jsonb("sections").notNull(), // TemplateSection[] (lib/schemas/meeting.ts)
+    agendaRules: text("agenda_rules").array().notNull().default([]), // suggestion query keys
+    extractionInstructions: text("extraction_instructions"), // appended to AI prompt (FR-42)
+    active: boolean("active").notNull().default(true), // latest version flag
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("meeting_template_base_idx").on(t.baseId, t.version)],
+);
+
+export const meeting = pgTable(
+  "meeting",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => meetingTemplate.id), // pins the exact version (FR-13)
+    date: timestamp("date", { withTimezone: true }).notNull().defaultNow(),
+    participants: text("participants").array().notNull().default([]), // user ids
+    answers: jsonb("answers").notNull().default({}),
+    freeText: text("free_text"), // "Additional notes" (FR-16)
+    status: text("status").notNull().default("draft"), // draft|submitted|processed|confirmed|pending_processing
+    summary: text("summary"),
+    createdById: text("created_by_id")
+      .notNull()
+      .references(() => user.id),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("meeting_status_idx").on(t.status, t.date)],
+);
+
+// FR-41: a dismissed agenda suggestion is not re-suggested for 7 days.
+export const suggestionDismissal = pgTable(
+  "suggestion_dismissal",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    key: text("key").notNull(), // stable hash of the suggestion content
+    dismissedById: text("dismissed_by_id")
+      .notNull()
+      .references(() => user.id),
+    dismissedUntil: timestamp("dismissed_until", {
+      withTimezone: true,
+    }).notNull(),
+  },
+  (t) => [index("suggestion_dismissal_key_idx").on(t.key)],
+);
+
 // Append-only audit trail; written in the same transaction as each mutation
 // (FR-7, FR-32). Also the data source for the phase-4 analytics module.
 export const activityLog = pgTable(
@@ -245,6 +347,10 @@ export const schema = {
   invitation,
   boardColumn,
   project,
+  objective,
+  meetingTemplate,
+  meeting,
+  suggestionDismissal,
   taskType,
   task,
   taskComment,

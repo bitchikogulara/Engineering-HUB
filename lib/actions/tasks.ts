@@ -54,6 +54,7 @@ export async function createTask(input: unknown) {
         position: Date.now(), // append to the end; drags refine ordering
         assigneeId: data.assigneeId,
         projectId: data.projectId ?? null,
+        objectiveId: data.objectiveId ?? null,
         typeId: data.typeId,
         requesterName: data.requesterName ?? null,
         requesterDepartment: data.requesterDepartment ?? null,

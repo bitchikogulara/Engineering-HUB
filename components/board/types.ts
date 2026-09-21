@@ -12,6 +12,8 @@ export type BoardTaskDto = {
   projectId: string | null;
   projectName: string | null;
   projectColor: number | null;
+  objectiveId: string | null;
+  objectiveTitle: string | null;
   typeId: string;
   typeName: string;
   typeColor: string;
@@ -47,8 +49,11 @@ export type TaskTypeDto = {
   isExternal: boolean;
 };
 
+export type ObjectiveOptionDto = { id: string; title: string };
+
 export type BoardConfigDto = {
   columns: ColumnDto[];
+  objectives: ObjectiveOptionDto[];
   projects: ProjectDto[];
   types: TaskTypeDto[];
   members: MemberDto[];

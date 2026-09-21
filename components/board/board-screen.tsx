@@ -24,12 +24,20 @@ type PendingMove = {
   position: number;
 };
 
+type ActiveObjective = {
+  id: string;
+  title: string;
+  done: number;
+  total: number;
+};
+
 export function BoardScreen({
   config,
   tasks: serverTasks,
   currentUserId,
   canEdit,
   canDelete,
+  activeObjectives,
   initialFilters,
   initialView,
 }: {
@@ -38,6 +46,7 @@ export function BoardScreen({
   currentUserId: string;
   canEdit: boolean;
   canDelete: boolean;
+  activeObjectives: ActiveObjective[];
   initialFilters: BoardFilters;
   initialView: View;
 }) {
@@ -155,6 +164,34 @@ export function BoardScreen({
 
   return (
     <div className="flex h-full flex-col gap-3">
+      {activeObjectives.length > 0 && (
+        <div className="space-y-1.5 rounded-lg border border-border bg-surface-1 px-3 py-2">
+          <p className="font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+            This week · Objectives
+          </p>
+          {activeObjectives.map((o) => (
+            <div key={o.id} className="flex items-center gap-3">
+              <span className="rounded bg-(--obj-active-bg) px-1.5 py-0.5 text-(--obj-active-fg) text-[11px]">
+                Active
+              </span>
+              <span className="min-w-0 flex-1 truncate text-foreground text-sm">
+                {o.title}
+              </span>
+              <span className="font-mono text-muted-foreground text-xs">
+                {o.done}/{o.total}
+              </span>
+              <div className="h-1.5 w-28 overflow-hidden rounded-full bg-surface-3 max-sm:hidden">
+                <div
+                  className="h-full rounded-full bg-(--obj-active)"
+                  style={{
+                    width: `${o.total ? Math.round((o.done / o.total) * 100) : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex rounded-md border border-border bg-surface-1 p-0.5">
           {(["board", "list", "mine"] as const).map((v) => (

@@ -55,6 +55,7 @@ export function TaskSheet({
     task?.assigneeId ?? config.members[0]?.id ?? "",
   );
   const [projectId, setProjectId] = useState(task?.projectId ?? "");
+  const [objectiveId, setObjectiveId] = useState(task?.objectiveId ?? "");
   const [typeId, setTypeId] = useState(
     task?.typeId ?? config.types[0]?.id ?? "",
   );
@@ -95,6 +96,7 @@ export function TaskSheet({
       description: description || null,
       assigneeId,
       projectId: projectId || null,
+      objectiveId: objectiveId || null,
       typeId,
       requesterName: requesterName || null,
       requesterDepartment: requesterDepartment || null,
@@ -257,6 +259,21 @@ export function TaskSheet({
                   {config.projects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className={labelCls}>Objective</span>
+                <select
+                  value={objectiveId}
+                  onChange={(e) => setObjectiveId(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">—</option>
+                  {config.objectives.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.title}
                     </option>
                   ))}
                 </select>

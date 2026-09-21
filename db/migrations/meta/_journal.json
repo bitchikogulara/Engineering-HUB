@@ -15,6 +15,20 @@
       "when": 1790003710887,
       "tag": "0001_orange_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790007708743,
+      "tag": "0002_abandoned_hercules",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790008018027,
+      "tag": "0003_search_vectors",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import {
   activityLog,
   boardColumn,
+  objective,
   project,
   task,
   taskComment,
@@ -40,6 +41,8 @@ export async function getBoardTasks() {
       projectId: task.projectId,
       projectName: project.name,
       projectColor: project.color,
+      objectiveId: task.objectiveId,
+      objectiveTitle: objective.title,
       typeId: task.typeId,
       typeName: taskType.name,
       typeColor: taskType.color,
@@ -60,6 +63,7 @@ export async function getBoardTasks() {
     .innerJoin(user, eq(user.id, task.assigneeId))
     .innerJoin(taskType, eq(taskType.id, task.typeId))
     .leftJoin(project, eq(project.id, task.projectId))
+    .leftJoin(objective, eq(objective.id, task.objectiveId))
     .where(notArchived())
     .orderBy(asc(task.position), asc(task.createdAt));
 }

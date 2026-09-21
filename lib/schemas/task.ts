@@ -11,6 +11,7 @@ export const taskBaseSchema = z.object({
   description: z.string().max(20_000).optional().nullable(),
   assigneeId: z.string().min(1, "Assignee is required"),
   projectId: z.string().uuid().optional().nullable(),
+  objectiveId: z.string().uuid().optional().nullable(),
   typeId: z.string().uuid(),
   requesterName: z.string().trim().max(200).optional().nullable(),
   requesterDepartment: z.string().trim().max(200).optional().nullable(),

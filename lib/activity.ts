@@ -6,7 +6,14 @@ import { activityLog } from "@/db/schema";
 type Tx = Pick<Db, "insert">;
 
 export type ActivityEntry = {
-  entityType: "task" | "column" | "project" | "task_type" | "user";
+  entityType:
+    | "task"
+    | "column"
+    | "project"
+    | "task_type"
+    | "user"
+    | "objective"
+    | "meeting";
   entityId: string;
   action: string;
   actorType?: "user" | "ai";

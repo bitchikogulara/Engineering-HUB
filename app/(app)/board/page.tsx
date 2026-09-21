@@ -3,6 +3,7 @@ import { BoardScreen } from "@/components/board/board-screen";
 import type { BoardTaskDto } from "@/components/board/types";
 import { hasPermission } from "@/lib/permissions";
 import { getBoardConfig, getBoardTasks } from "@/lib/queries/board";
+import { getObjectives } from "@/lib/queries/objectives";
 import { requireSession } from "@/lib/session";
 import { isOverdue, isStale } from "@/lib/task-rules";
 
@@ -16,7 +17,12 @@ export default async function BoardPage({
 }) {
   const session = await requireSession();
   const params = await searchParams;
-  const [config, rows] = await Promise.all([getBoardConfig(), getBoardTasks()]);
+  const [config, rows, objectives] = await Promise.all([
+    getBoardConfig(),
+    getBoardTasks(),
+    getObjectives(),
+  ]);
+  const activeObjectives = objectives.filter((o) => o.state === "active");
 
   const now = new Date();
   const tasks: BoardTaskDto[] = rows.map((t) => ({
@@ -31,6 +37,8 @@ export default async function BoardPage({
     projectId: t.projectId,
     projectName: t.projectName,
     projectColor: t.projectColor,
+    objectiveId: t.objectiveId,
+    objectiveTitle: t.objectiveTitle,
     typeId: t.typeId,
     typeName: t.typeName,
     typeColor: t.typeColor,
@@ -52,8 +60,17 @@ export default async function BoardPage({
 
   return (
     <BoardScreen
+      activeObjectives={activeObjectives.map((o) => ({
+        id: o.id,
+        title: o.title,
+        done: o.done,
+        total: o.total,
+      }))}
       config={{
         columns: config.columns,
+        objectives: objectives
+          .filter((o) => o.state === "active" || o.state === "planned")
+          .map((o) => ({ id: o.id, title: o.title })),
         projects: config.projects.map((p) => ({
           id: p.id,
           name: p.name,
