@@ -1,6 +1,6 @@
-# Design brief — prompt for the design agent
+# Design brief — prompt for the design agent (Claude Code)
 
-Copy everything below the line into the design session. The outcome (design system + screen mockups) comes back to the CTO agent for implementation with Tailwind + shadcn/ui.
+Copy everything below the line into a Claude Code session started in an empty folder. The outcome (design system + screen mockups as static HTML) comes back to the CTO agent for implementation with Tailwind + shadcn/ui.
 
 ---
 
@@ -41,11 +41,33 @@ You are the lead product designer for **Engineering Hub**, an internal web app f
 - Implementation target is Tailwind + shadcn/ui + dnd-kit — stay within what those can express; no bespoke physics or heavy animation. Micro-transitions ≤150 ms only.
 - No native app; it's a PWA in a phone browser — respect safe areas, no hover-only affordances.
 
-## Output format
+## Deliverables — exact file structure
 
-1. A design-tokens spec (colors light+dark, type scale, spacing, radii) as a table or JSON mapped to shadcn/Tailwind CSS variable names.
-2. High-fidelity mockups of the 10 screens (desktop + mobile for screens 1, 3, 5, 6, 7; desktop-only acceptable for the rest), delivered as HTML/CSS mockups or Figma frames — HTML preferred so the tokens are directly reusable.
-3. A short rationale note per screen (3–5 sentences: key decisions, what to test).
-4. The component sheet from "Core components" rendered in both themes.
+Create this in the working directory (nothing else, no build step):
 
-Prioritize in this order if scope must be cut: tokens → board → proposal screen → meeting form → dashboards → analytics → the rest.
+```
+/design
+  tokens.css        ALL design tokens as CSS custom properties on :root
+                    (light) and [data-theme="dark"], named to map 1:1 onto
+                    shadcn/Tailwind variables (--background, --foreground,
+                    --primary, --muted, --destructive, --radius, …) plus the
+                    semantic set from this brief (--col-blocked, --priority-p1,
+                    --badge-stale, --ai-origin, --type-service, …)
+  base.css          typography scale, spacing utilities shared by all pages
+  index.html        gallery page linking every mockup, with a light/dark toggle
+  components.html   the full component sheet, every component in both themes
+  01-board.html … 10-analytics.html   one file per screen, numbered as listed
+  NOTES.md          per-screen rationale (3–5 sentences each: key decisions,
+                    what to user-test) + any token decisions worth explaining
+```
+
+Rules for the mockups:
+
+- **Static, self-contained HTML + CSS only.** Every page links only `tokens.css` and `base.css`. No frameworks, no React, no Tailwind CDN, no build tools, no external JS. The only JavaScript allowed: the theme toggle (sets `data-theme` on `<html>`, persisted in localStorage) and trivial show/hide for demonstrating states.
+- Fonts via Google Fonts `<link>` only; pick max 2 families. Icons: inline SVG (Lucide-style), no icon-font CDNs.
+- **Colors only via the tokens** — if a color appears in a page's CSS as a raw hex value instead of `var(--…)`, that's a bug. The implementation will consume `tokens.css` directly.
+- Every screen must render correctly in both themes and at both 1440 px and 390 px wide (responsive in the same file — no separate mobile files). Check dark mode on every screen, not just the first.
+- Fill every screen with **realistic engineering-department data** (CAN bus readers, ESP32 boards, FaceGate Android app, diagnostics app, service-dept print requests, names like Bitchiko and Nikoloz) — never "Lorem ipsum" or "Task 1". Show populated states AND one empty state per major surface.
+- After building each page, review it at both widths in both themes before moving on; fix contrast failures (WCAG AA) immediately.
+
+Work in this order and stop for feedback after step 2: (1) `tokens.css` + `base.css` + `components.html`, (2) board + proposal screen, (3) meeting form + dashboards + analytics, (4) the rest + `index.html` + `NOTES.md`. If scope must be cut, cut from the tail of that order — never from the tokens or the proposal screen.
