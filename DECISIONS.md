@@ -68,6 +68,13 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 **Decision:** `task_types` table, admin/user-manageable (name, color, icon, `is_external` flag), seeded with Internal / Service request / Print job / Repair / Admin. `task_type_id` required on every task (default Internal). External types require requester name + department. Intake is team-logged in v1 — owner explicitly chose no outside access; the model (requester distinct from assignee, type as FK) leaves a later token-based intake form a pure addition, not a migration.
 **Consequence:** New FR-43/FR-44 in the spec, phase 1. Task type becomes a filter, an optional swimlane grouping, and a core analytics dimension.
 
+## ADR-012 — Database driver: node-postgres (pg), not postgres.js
+
+**Status:** accepted · 2026-09-21 (during phase 1)
+**Context:** ADR-003 paired Drizzle with postgres.js. In practice, postgres.js deadlocked inside the Next.js dev server under concurrent queries against the Supabase transaction pooler: Postgres showed the backends in `ClientRead` (results sent), while the Node client never drained the socket — requests hung for minutes. The identical SQL ran in <1 s from a standalone script.
+**Decision:** Swap the runtime driver to node-postgres (`pg`) with a small pool (max 5, 20 s idle timeout, 10 s connect timeout, TLS). Drizzle API unchanged; drizzle-kit migrations unaffected; seed script still uses postgres.js in a single-shot process where the bug does not manifest.
+**Consequence:** Boring, battle-tested driver in the request path; board renders went from minutes/hung to <1 s.
+
 ## ADR-011 — Analytics: in-app SQL over activity log, no vendor
 
 **Status:** accepted (owner request, 2026-09-21)
