@@ -11,7 +11,7 @@ You are the lead product designer for **Engineering Hub**, an internal web app f
 - **Tone:** a precise instrument, not a corporate suite. Think Linear's density and calm + a workshop logbook's matter-of-factness. No marketing gloss, no illustrations, no empty decoration.
 - **Speed is the aesthetic:** the design should feel instant — dense but breathable layouts, minimal chrome, content-first. Anything that adds a click or a modal must justify itself.
 - **Trust cues for AI:** everything the AI produced must be visibly distinguishable from human work (a subtle, consistent "AI" marker/badge with a link to its source meeting quote). The AI proposes; the human confirms — the UI language must never imply the AI acted on its own.
-- **Two users + one viewer:** avatars/attribution everywhere matter more than in big-team tools; there are exactly 2–3 faces, make them recognizable at a glance.
+- **Small team, built to grow:** today it's 2 engineers + 1 viewer, but every layout must scale gracefully to ~10 people — per-person form sections repeat per participant, swimlanes and dashboards can't assume two rows. Attribution matters everywhere: avatars must be recognizable at a glance at any team size.
 
 ## Design system deliverables
 

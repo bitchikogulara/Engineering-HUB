@@ -1,7 +1,7 @@
 # Engineering Hub — Architecture
 
-Status: v1.0 · 2026-09-21 · Owner: CTO agent · Companion to `Engineering Hub — Product Specification.md`
-Decisions and their rationale are logged in `DECISIONS.md`; anything marked **[pending owner]** needs Bitchiko's sign-off before implementation.
+Status: v1.1 · 2026-09-21 · Owner: CTO agent · Companion to `Engineering Hub — Product Specification.md`
+Decisions and their rationale are logged in `DECISIONS.md`. Design target: works for 2 users today, stays useful at 10+ — nothing (forms, swimlanes, dashboards, permissions) hard-codes team size (ADR-009).
 
 ## 1. System overview
 
@@ -41,7 +41,7 @@ Data flow for the core loop: meeting form (autosaved to Postgres) → submit →
 | --- | --- | --- |
 | Framework | **Next.js 16** (App Router, TS strict) | Spec said 15; 16 is current stable with saner caching defaults. ADR-001 |
 | Hosting | Vercel, auto-deploy from `main`, preview per PR | As spec |
-| Database | **Supabase Postgres** | Resolves §13 open question. Bundles Realtime + Storage + pg_cron, one vendor instead of three. **[pending owner]** ADR-002 |
+| Database | **Supabase Postgres** | Resolves §13 open question (owner approved). Bundles Realtime + Storage + pg_cron, one vendor instead of three. ADR-002 |
 | ORM | **Drizzle** | SQL-first, no codegen, small bundle → fast serverless cold starts. ADR-003 |
 | Auth | **Better Auth** (GitHub OAuth + email/password, invite-only) | Deviation: spec said Auth.js, which is now in security-patch-only maintenance under the Better Auth team. ADR-004 |
 | Realtime | Supabase Realtime (broadcast channels + presence) | Board moves (phase 1, cheap), collaborative forms (phase 5) |
@@ -49,7 +49,7 @@ Data flow for the core loop: meeting form (autosaved to Postgres) → submit →
 | UI | Tailwind CSS 4 + shadcn/ui; dnd-kit for drag-and-drop | As spec |
 | Validation | Zod v4, schemas in `/lib/schemas` shared by forms, actions, and AI output | As spec |
 | Background work | Next.js `after()` for AI jobs; **pg_cron → secured route handler** for schedules | Vercel Hobby cron is too coarse for "15 min before meeting" reminders. ADR-005 |
-| Notifications | In-app + **Telegram bot** (email later if needed) | **[pending owner]** ADR-006 |
+| Notifications | In-app + **WhatsApp** (Meta Business Cloud API; email/Telegram addable later) | Owner's choice. ADR-006 |
 | PDF export | `@react-pdf/renderer`, server-side | Phase 4 |
 | Monitoring | Sentry free tier (client + server) + Vercel logs; AI cost log table in DB | As spec |
 
@@ -147,7 +147,7 @@ Implementation rules:
 
 - **Source of truth:** recurrence rules (RRULE strings) on `meeting_templates`; next occurrences materialized into a `scheduled_meetings` table by a nightly job.
 - **Trigger:** Supabase **pg_cron** runs every 5 minutes → `net.http_post` to `/api/cron/tick` (secured by bearer secret) → the handler sends due reminders, flags meetings overdue (> 2 h past start, FR-40), and sends the morning digest at 08:30.
-- **Dispatch:** `/lib/notifications.ts` exposes `notify(userId, event)`; channels are pluggable. Phase 4 ships in-app (bell + unread) and Telegram bot (grammY, webhook route; each user links their chat once via a deep-link code). Every reminder carries a deep link to the pre-filled form.
+- **Dispatch:** `/lib/notifications.ts` exposes `notify(userId, event)`; channels are pluggable. Phase 4 ships in-app (bell + unread) and WhatsApp via the Meta Business Cloud API (pre-approved utility templates; each user links their number once in settings). Every reminder carries a deep link to the pre-filled form. Meta business verification is a phase-4 prerequisite — start it early; in-app ships regardless (ADR-006).
 - Agenda suggestions (§6.2) are pure SQL in `/lib/queries/suggestions.ts` — deterministic, instant, no AI (FR-41).
 
 ## 8. Security

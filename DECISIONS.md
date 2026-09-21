@@ -13,7 +13,7 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 
 ## ADR-002 — Supabase over Neon (resolves §13 open question)
 
-**Status:** pending owner approval · 2026-09-21
+**Status:** accepted (owner approved 2026-09-21)
 **Context:** Spec left Neon+Auth.js vs Supabase open. We need Postgres **and** a realtime channel (live board moves phase 1, collaborative forms phase 5) **and** a scheduler for reminders. Neon would require adding Pusher/Ably (realtime) and an external cron service — three vendors instead of one. Supabase bundles Postgres, Realtime, pg_cron, Storage, daily backups on the free tier. Known caveat: free projects pause after ~7 days of inactivity — irrelevant for a daily-use tool, and a pg_cron heartbeat exists anyway.
 **Decision:** Supabase Postgres as the database platform. We do NOT use Supabase Auth or client-side RLS data access — auth is Better Auth (ADR-004), all data access via Drizzle server-side; Supabase's client SDK is used for Realtime subscriptions only.
 **Consequence:** One vendor for DB/realtime/cron/backups; portability preserved (plain Postgres + Drizzle migrations — moving to Neon later is a connection-string change plus a realtime substitute).
@@ -36,11 +36,11 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 **Context:** Reminders need ≤5-minute granularity ("15 min before meeting", FR-40). Vercel Hobby cron is limited to coarse schedules; upgrading Vercel plan just for cron violates the cost ceiling (FR-38).
 **Decision:** Supabase pg_cron fires every 5 min → `net.http_post` to `/api/cron/tick` secured with `CRON_SECRET`. All schedule logic lives in the app; pg_cron is only the clock.
 
-## ADR-006 — Notification channel: in-app + Telegram bot (resolves §13 open question)
+## ADR-006 — Notification channel: in-app + WhatsApp (resolves §13 open question)
 
-**Status:** pending owner approval · 2026-09-21
-**Context:** Options were email, Telegram, in-app. Email from a hobby project needs a sending domain + deliverability work; the team lives on phones in a workshop where Telegram is ubiquitous, and a bot is free and instant.
-**Decision:** Phase 4 ships in-app notifications + a Telegram bot (grammY, webhook mode). `notify()` dispatcher is channel-agnostic so email can be added later without touching call sites.
+**Status:** accepted (owner chose WhatsApp, 2026-09-21)
+**Context:** Owner picked WhatsApp + in-app over Telegram/email. WhatsApp requires the Meta WhatsApp Business Cloud API: a Meta Business account, a verified sender phone number, and pre-approved message templates for business-initiated notifications, which are billed per message (fractions of a cent; negligible at our volume but not zero, unlike Telegram). Setup friction is front-loaded and one-time.
+**Decision:** Phase 4 ships in-app notifications + WhatsApp via the Business Cloud API (approved utility templates for reminders/digests/mentions, each with a deep link). `notify()` dispatcher stays channel-agnostic so Telegram/email can be added without touching call sites. If Meta business verification stalls, in-app ships first and WhatsApp follows — reminders must not block phase 4.
 
 ## ADR-007 — Form collaboration: field-level LWW + presence, not CRDT
 
@@ -53,3 +53,10 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 **Status:** accepted · 2026-09-21
 **Context:** FR-19 demands strict JSON. Prompt-based "return JSON" is fragile; the Anthropic API enforces a JSON schema when the response is a forced tool call.
 **Decision:** Extraction responses are a forced tool call whose input schema is generated from the shared Zod schema; output is Zod-validated again server-side, one retry on failure, then `pending_processing` (FR-25). Duplicate candidates are pre-computed with pg_trgm and injected into the prompt for the model to resolve explicitly.
+
+## ADR-009 — Owner rulings, 2026-09-21
+
+**Status:** accepted
+**Boss access:** Viewer login arrives with the phase-4 boss dashboard; until then the boss gets token-based summary links only.
+**Daily sync:** stays a live meeting form as the default. The meeting-type model already carries a mode field conceptually — an async check-in variant (each person fills their block before a deadline, AI processes when all have submitted) will be added later as a per-occurrence choice, not a replacement. Build meeting records so a meeting can have per-participant submission timestamps to keep that door open.
+**Scale:** design for N users, not 2 — per-person form sections, swimlanes, dashboards, and the permission model must not hard-code team size. The spec's "works for 2, nothing breaks at 10" is a floor, not a ceiling.
