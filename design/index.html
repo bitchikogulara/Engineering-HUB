@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering Hub — Design Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<style>
+  .gwrap { max-width: 1120px; margin: 0 auto; padding: 30px 22px 80px; }
+  .ghead { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo { width: 44px; height: 44px; border-radius: 12px; background: var(--primary); color: var(--primary-foreground);
+    display: grid; place-items: center; font-weight: 700; font-family: var(--font-mono); font-size: 20px; }
+  .lede { color: var(--muted-foreground); font-size: 14.5px; max-width: 620px; margin: 14px 0 26px; line-height: 1.6; }
+  .meta-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 30px; }
+  .meta-strip .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 5px 11px; border-radius: var(--radius-full);
+    border: 1px solid var(--border); background: var(--card); color: var(--muted-foreground); }
+  .meta-strip .pill .chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .sect { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted-foreground); font-weight: 600;
+    margin: 30px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 14px; }
+  .gcard { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+    background: var(--card); text-decoration: none; color: inherit; transition: border-color .12s, transform .12s, box-shadow .12s; }
+  .gcard:hover { border-color: var(--muted-foreground); transform: translateY(-2px); box-shadow: var(--shadow-md); text-decoration: none; }
+  .thumb { height: 132px; position: relative; overflow: hidden; border-bottom: 1px solid var(--border);
+    background: linear-gradient(140deg, var(--surface-2), var(--surface-3)); }
+  .thumb .mini-shell { position: absolute; inset: 12px; display: flex; gap: 6px; }
+  .thumb .mini-side { width: 20px; border-radius: 5px; background: var(--card); border: 1px solid var(--border); }
+  .thumb .mini-main { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+  .thumb .mini-bar { height: 12px; border-radius: 3px; background: var(--card); border: 1px solid var(--border); }
+  .thumb .mini-row { flex: 1; display: flex; gap: 5px; }
+  .thumb .mini-col { flex: 1; border-radius: 5px; background: var(--card); border: 1px solid var(--border); border-top: 2px solid var(--tc, var(--border)); }
+  .gc-body { padding: 13px 14px; display: flex; flex-direction: column; gap: 3px; }
+  .gc-num { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); }
+  .gc-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .gc-desc { font-size: 12px; color: var(--muted-foreground); line-height: 1.45; }
+  .gc-star { font-size: 10px; font-weight: 700; letter-spacing: .03em; color: var(--ai-origin-fg); background: var(--ai-origin-bg);
+    border: 1px solid color-mix(in srgb,var(--ai-origin) 30%,transparent); padding: 1px 6px; border-radius: var(--radius-full); }
+  .foot { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted-foreground); line-height: 1.7; }
+  .foot code { font-family: var(--font-mono); background: var(--muted); padding: 1px 5px; border-radius: 4px; color: var(--foreground); }
+  .tt-btn { position: fixed; top: 18px; right: 18px; z-index: 60; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></symbol>
+</defs></svg>
+
+<button class="btn btn-outline btn-sm tt-btn" onclick="toggleTheme()" id="tt">
+  <svg class="ic-moon" style="width:14px;height:14px"><use href="#i-moon"/></svg><svg class="ic-sun" style="display:none;width:14px;height:14px"><use href="#i-sun"/></svg>
+  <span class="tt-label">Dark</span>
+</button>
+
+<div class="gwrap">
+  <div class="ghead">
+    <div class="brand"><div class="logo">E</div><div><h1 class="t-h1" style="margin:0">Engineering Hub</h1><span class="t-sm muted">Design system + screen mockups · handoff to Tailwind + shadcn/ui</span></div></div>
+  </div>
+  <p class="lede">An internal web app for the 2-person Transporter Group engineering department — a Kanban board, weekly objectives, and an AI meeting assistant that proposes tasks and decisions for a human to confirm. A precise instrument, dense but breathable, dark-first for workshop evenings, and built to scale gracefully to ~10 people.</p>
+
+  <div class="meta-strip">
+    <span class="pill"><span class="chip-dot" style="background:var(--primary)"></span>IBM Plex Sans / Mono</span>
+    <span class="pill"><span class="chip-dot" style="background:var(--col-blocked)"></span>Blocked = loudest</span>
+    <span class="pill"><svg style="width:13px;height:13px;color:var(--ai-origin)"><use href="#i-ai"/></svg>AI marker throughout</span>
+    <span class="pill">Light + dark · 1440 + 390</span>
+    <span class="pill">WCAG AA · color never the only signal</span>
+  </div>
+
+  <div class="sect">Foundation</div>
+  <div class="cards">
+    <a class="gcard" href="components.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-main"><div class="mini-bar" style="width:60%"></div><div class="mini-row"><div class="mini-col" style="--tc:var(--priority-p1)"></div><div class="mini-col" style="--tc:var(--ai-origin)"></div><div class="mini-col" style="--tc:var(--col-done)"></div></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">Component sheet</span><span class="gc-title">Components</span><span class="gc-desc">Every component, both themes side by side — cards, badges, AI marker, diff rows, forms.</span></div>
+    </a>
+  </div>
+
+  <div class="sect">Screens · desktop 1440 + mobile 390, both themes</div>
+  <div class="cards">
+    <a class="gcard" href="01-board.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-side"></div><div class="mini-main"><div class="mini-bar" style="width:80%"></div><div class="mini-row"><div class="mini-col" style="--tc:var(--col-backlog)"></div><div class="mini-col" style="--tc:var(--col-thisweek)"></div><div class="mini-col" style="--tc:var(--col-blocked)"></div><div class="mini-col" style="--tc:var(--col-done)"></div></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">01</span><span class="gc-title">Board</span><span class="gc-desc">6-column Kanban, objectives pinned above, swimlanes, blocked / overdue / stale / drag states.</span></div>
+    </a>
+    <a class="gcard" href="02-task-detail.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-main" style="opacity:.4"></div><div class="mini-side" style="width:60%"></div></div></div>
+      <div class="gc-body"><span class="gc-num">02</span><span class="gc-title">Task detail</span><span class="gc-desc">Side sheet: fields, checklist, activity, comments, origin-meeting quote.</span></div>
+    </a>
+    <a class="gcard" href="03-meeting-form.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-side"></div><div class="mini-main"><div class="mini-bar"></div><div class="mini-bar" style="width:70%"></div><div class="mini-bar" style="flex:1;height:auto"></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">03</span><span class="gc-title">Meeting form (live)</span><span class="gc-desc">Per-person question groups, auto-loaded context, agenda chips, autosave, presence.</span></div>
+    </a>
+    <a class="gcard" href="04-clarification.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-side"></div><div class="mini-main"><div class="mini-bar" style="--tc:var(--ai-origin);border-top:2px solid var(--ai-origin)"></div><div class="mini-bar" style="width:80%"></div><div class="mini-bar" style="width:80%"></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">04</span><span class="gc-title">AI processing → clarification</span><span class="gc-desc">Extraction progress, then up to 5 answerable / skippable clarifications.</span></div>
+    </a>
+    <a class="gcard" href="05-proposal.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-main" style="border-right:1px solid var(--border);padding-right:6px"><div class="mini-bar"></div><div class="mini-bar" style="width:60%"></div></div><div class="mini-main"><div class="mini-bar" style="--tc:var(--col-done);border-top:2px solid var(--col-done)"></div><div class="mini-bar" style="--tc:var(--badge-stale);border-top:2px solid var(--badge-stale)"></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">05</span><span class="gc-title">Proposal <span class="gc-star">SIGNATURE</span></span><span class="gc-desc">Split source ↔ proposals, accept / edit / reject, confidence, needs-attention, sticky confirm.</span></div>
+    </a>
+    <a class="gcard" href="06-dashboard-member.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-side"></div><div class="mini-main"><div class="mini-bar"></div><div class="mini-row"><div class="mini-col"></div><div class="mini-col"></div></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">06</span><span class="gc-title">Dashboard (member)</span><span class="gc-desc">Objectives, board snapshot (blocked first), overdue/stale, next 7 days, decisions.</span></div>
+    </a>
+    <a class="gcard" href="07-dashboard-boss.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-main"><div class="mini-bar" style="width:50%"></div><div class="mini-row"><div class="mini-col"></div><div class="mini-col"></div></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">07</span><span class="gc-title">Dashboard (boss / viewer)</span><span class="gc-desc">Read-only, calm: quarter progress, objectives, delivered feed, decisions awaiting.</span></div>
+    </a>
+    <a class="gcard" href="08-meetings-hub.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-side"></div><div class="mini-main"><div class="mini-bar"></div><div class="mini-bar" style="--tc:var(--badge-overdue);border-top:2px solid var(--badge-overdue)"></div><div class="mini-bar" style="width:75%"></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">08</span><span class="gc-title">Meetings hub</span><span class="gc-desc">Upcoming (with overdue state), past list, immutable confirmed-meeting record.</span></div>
+    </a>
+    <a class="gcard" href="09-decision-log.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-side"></div><div class="mini-main"><div class="mini-bar" style="width:65%"></div><div class="mini-bar" style="width:90%"></div><div class="mini-bar" style="width:80%"></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">09</span><span class="gc-title">Decision log</span><span class="gc-desc">Searchable chronological timeline — decision, context, date, source-meeting link.</span></div>
+    </a>
+    <a class="gcard" href="10-analytics.html">
+      <div class="thumb"><div class="mini-shell"><div class="mini-main"><div class="mini-row" style="align-items:flex-end"><div class="mini-col" style="height:40%"></div><div class="mini-col" style="height:70%"></div><div class="mini-col" style="height:55%"></div><div class="mini-col" style="height:90%;--tc:var(--primary);border-top:2px solid var(--primary)"></div></div></div></div></div>
+      <div class="gc-body"><span class="gc-num">10</span><span class="gc-title">Analytics</span><span class="gc-desc">Throughput, splits, blocked days, objectives hit rate, AI acceptance + cost — each with a headline.</span></div>
+    </a>
+  </div>
+
+  <div class="foot">
+    Static, self-contained HTML + CSS. Every page links only <code>tokens.css</code> and <code>base.css</code>. The only JavaScript is the theme toggle (persisted in <code>localStorage</code>) and trivial state demos. All colors resolve through tokens — <code>tokens.css</code> maps 1:1 onto shadcn/Tailwind variables and is meant to be consumed directly by the implementation. See <code>NOTES.md</code> for per-screen rationale.
+  </div>
+</div>
+
+<script>
+(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('eh-theme') || 'dark'); })();
+function toggleTheme(){ var d=document.documentElement,t=d.getAttribute('data-theme')==='dark'?'light':'dark'; d.setAttribute('data-theme',t); localStorage.setItem('eh-theme',t); syncTT(); }
+function syncTT(){ var dark=document.documentElement.getAttribute('data-theme')==='dark',b=document.getElementById('tt'); if(!b)return;
+  b.querySelector('.ic-moon').style.display=dark?'':'none'; b.querySelector('.ic-sun').style.display=dark?'none':''; b.querySelector('.tt-label').textContent=dark?'Dark':'Light'; }
+syncTT();
+</script>
+</body>
+</html>

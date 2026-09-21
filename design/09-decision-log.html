@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decisions — Engineering Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<style>
+
+  .dl { max-width: 820px; margin:0 auto; }
+  .dl-search { display:flex; align-items:center; gap:9px; height:38px; padding:0 12px; border:1px solid var(--input); border-radius:var(--radius-md); background:var(--card); margin-bottom:8px; color:var(--muted-foreground); }
+  .dl-search svg{width:16px;height:16px} .dl-search input{border:none;background:transparent;outline:none;font:inherit;font-size:14px;color:var(--foreground);flex:1}
+  .dl-filters { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:20px; }
+  .month-label { font-family:var(--font-mono); font-size:11px; color:var(--muted-foreground); letter-spacing:.05em; margin:20px 0 10px; }
+  .dentry { display:grid; grid-template-columns:auto 1fr; gap:14px; padding-bottom:18px; position:relative; }
+  .dentry .rail { display:flex; flex-direction:column; align-items:center; }
+  .dentry .node { width:12px; height:12px; border-radius:50%; background:var(--ai-origin); border:2px solid var(--card); box-shadow:0 0 0 1px var(--border); margin-top:4px; flex:none; }
+  .dentry .node.human { background:var(--primary); }
+  .dentry .line { width:2px; flex:1; background:var(--border); margin-top:4px; }
+  .dentry .card2 { border:1px solid var(--border); border-radius:var(--radius-md); background:var(--card); padding:13px 15px; box-shadow:var(--shadow-xs); }
+  .dentry .ti { font-size:14px; font-weight:600; margin:0 0 5px; }
+  .dentry .ctx { font-size:12.5px; color:var(--muted-foreground); margin:0 0 10px; }
+  .dentry .meta { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:11.5px; color:var(--muted-foreground); }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.48 14.14a2 2 0 0 0 1.71 3h16.96a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></symbol>
+<symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+<symbol id="i-board" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></symbol>
+<symbol id="i-gavel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 10-7 7M13 5l6 6M11 7l6 6M3 21h8"/></symbol>
+<symbol id="i-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></symbol>
+<symbol id="i-cog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.2A1.6 1.6 0 0 0 7 19.5l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4.6 15H4.4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 6.5 8.3l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H11a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7-1.1l-.1.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V11a2 2 0 1 1 0 4h-.2Z"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22V4"/></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4-2v-4Z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+<symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></symbol>
+<symbol id="i-quote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h4v4a4 4 0 0 1-4 4M15 8h4v4a4 4 0 0 1-4 4"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 7-7M14 8h5v5"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6.5A4 4 0 0 0 13 4h-2a3.5 3.5 0 0 0 0 7h2a3.5 3.5 0 0 1 0 7h-2.5A4 4 0 0 1 7 17.5"/></symbol>
+<symbol id="i-checkcircle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+</defs></svg>
+<div class="app">
+  <aside class="sidebar"><div class="logo">E</div>
+    <a class="nav-item" href="06-dashboard-member.html" title="Dashboard"><svg><use href="#i-dash"/></svg></a>
+    <a class="nav-item" href="01-board.html" title="Board"><svg><use href="#i-board"/></svg></a>
+    <a class="nav-item" href="08-meetings-hub.html" title="Meetings"><svg><use href="#i-mic"/></svg></a>
+    <a class="nav-item active" href="09-decision-log.html" title="Decisions"><svg><use href="#i-gavel"/></svg></a>
+    <a class="nav-item" href="08-meetings-hub.html" title="Archive"><svg><use href="#i-archive"/></svg></a>
+    <div class="nav-spacer"></div>
+    <a class="nav-item" href="#" title="Admin"><svg><use href="#i-cog"/></svg></a></aside>
+  <div class="main">
+    <header class="topbar">
+      <strong class="hide-mobile" style="font-size:14px">Decisions</strong>
+      
+      <div class="search"><svg><use href="#i-search"/></svg><span class="grow">Search tasks, meetings, decisions…</span><span class="kbd hide-mobile">⌘K</span></div>
+      
+      <button class="btn btn-outline btn-icon" onclick="toggleTheme()" id="tt" title="Toggle theme"><svg class="ic-moon"><use href="#i-moon"/></svg><svg class="ic-sun" style="display:none"><use href="#i-sun"/></svg></button>
+    </header>
+    <div class="page">
+
+      <div class="dl">
+        <div class="row between" style="margin-bottom:14px"><h1 class="t-h1">Decision log</h1><span class="t-2xs muted num">24 decisions · Q3</span></div>
+        <div class="dl-search"><svg><use href="#i-search"/></svg><input placeholder="Search decisions, context, projects…"><span class="kbd">⌘K</span></div>
+        <div class="dl-filters">
+          <button class="chip"><span class="chip-dot" style="background:var(--project-2)"></span>CAN Reader</button>
+          <button class="chip"><span class="chip-dot" style="background:var(--project-1)"></span>FaceGate</button>
+          <button class="chip"><svg style="width:13px;height:13px"><use href="#i-ai"/></svg>AI-logged</button>
+          <button class="chip"><svg style="width:13px;height:13px"><use href="#i-cal"/></svg>This quarter</button>
+        </div>
+
+        <div class="month-label">SEPTEMBER 2026</div>
+        <div class="dentry">
+          <div class="rail"><span class="node"></span><span class="line"></span></div>
+          <div class="card2">
+            <p class="ti">Standardise the CAN stack on SocketCAN</p>
+            <p class="ctx">Recurring latency and tooling debate resolved — slcan kept only for the legacy bench rig.</p>
+            <div class="meta"><span class="mono">21 Sep</span><span class="ai-tag"><svg><use href="#i-ai"/></svg>logged from meeting</span><span class="row" style="gap:5px"><span class="avatar avatar-sm av-4">NK</span>Nikoloz</span><a href="08-meetings-hub.html"><svg style="width:12px;height:12px;vertical-align:-2px"><use href="#i-link"/></svg> Daily sync</a></div>
+          </div>
+        </div>
+        <div class="dentry">
+          <div class="rail"><span class="node human"></span><span class="line"></span></div>
+          <div class="card2">
+            <p class="ti">Pilot FaceGate on door 3 first</p>
+            <p class="ctx">Highest foot-traffic, closest to the workshop for quick fixes. Full rollout gated on 2 weeks clean uptime.</p>
+            <div class="meta"><span class="mono">19 Sep</span><span class="row" style="gap:5px"><span class="avatar avatar-sm av-1">BM</span>Bitchiko</span><a href="08-meetings-hub.html"><svg style="width:12px;height:12px;vertical-align:-2px"><use href="#i-link"/></svg> Daily sync</a></div>
+          </div>
+        </div>
+        <div class="dentry">
+          <div class="rail"><span class="node"></span><span class="line"></span></div>
+          <div class="card2">
+            <p class="ti">Service-dept prints go through the board as external tasks</p>
+            <p class="ctx">Every print request becomes a typed task with requester + department, so nothing lives only in chat.</p>
+            <div class="meta"><span class="mono">15 Sep</span><span class="ai-tag"><svg><use href="#i-ai"/></svg>logged from meeting</span><span class="row" style="gap:5px"><span class="avatar avatar-sm av-4">NK</span>Nikoloz</span><a href="08-meetings-hub.html"><svg style="width:12px;height:12px;vertical-align:-2px"><use href="#i-link"/></svg> Weekly planning</a></div>
+          </div>
+        </div>
+
+        <div class="month-label">AUGUST 2026</div>
+        <div class="dentry">
+          <div class="rail"><span class="node human"></span></div>
+          <div class="card2">
+            <p class="ti">Freeze ESP32 hardware rev at C2 for the year</p>
+            <p class="ctx">Avoid re-qualifying the enclosure and firmware. Rev D exploration parked to Q1.</p>
+            <div class="meta"><span class="mono">28 Aug</span><span class="row" style="gap:5px"><span class="avatar avatar-sm av-1">BM</span>Bitchiko</span><a href="08-meetings-hub.html"><svg style="width:12px;height:12px;vertical-align:-2px"><use href="#i-link"/></svg> Weekly planning</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<nav class="bottom-nav"><a class="nav-item" href="06-dashboard-member.html"><svg><use href="#i-dash"/></svg>Home</a><a class="nav-item" href="01-board.html"><svg><use href="#i-board"/></svg>Board</a><a class="nav-item" href="08-meetings-hub.html"><svg><use href="#i-mic"/></svg>Meetings</a><a class="nav-item active" href="09-decision-log.html"><svg><use href="#i-gavel"/></svg>Decisions</a><a class="nav-item" href="08-meetings-hub.html"><svg><use href="#i-archive"/></svg>Archive</a></nav>
+
+<script>
+(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('eh-theme') || 'dark'); })();
+function toggleTheme(){ var d=document.documentElement,t=d.getAttribute('data-theme')==='dark'?'light':'dark'; d.setAttribute('data-theme',t); localStorage.setItem('eh-theme',t); syncTT(); }
+function syncTT(){ var dark=document.documentElement.getAttribute('data-theme')==='dark',b=document.getElementById('tt'); if(!b)return; b.querySelector('.ic-moon').style.display=dark?'':'none'; b.querySelector('.ic-sun').style.display=dark?'none':''; }
+syncTT();
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily sync — Engineering Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<style>
+
+  .mf-wrap { max-width: 720px; margin: 0 auto; }
+  .mf-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .autosave { display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--success); }
+  .autosave svg { width:13px; height:13px; }
+  .presence { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted-foreground); padding:4px 9px 4px 6px; border:1px solid var(--border); border-radius:var(--radius-full); }
+  .presence .live { width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px color-mix(in srgb,var(--success) 22%,transparent); }
+  .agenda-strip { border:1px solid color-mix(in srgb,var(--ai-origin) 32%,transparent); background:var(--ai-origin-bg); border-radius:var(--radius-md); padding:12px; margin-bottom:18px; }
+  .agenda-chip { display:inline-flex; align-items:center; gap:4px; padding:5px 5px 5px 11px; border-radius:var(--radius-full); background:var(--card); color:var(--foreground); border:1px solid var(--border); font-size:12px; font-weight:500; }
+  .agenda-chip button { width:22px; height:22px; border-radius:50%; border:none; cursor:pointer; display:grid; place-items:center; }
+  .agenda-chip button svg { width:13px; height:13px; }
+  .ac-y { background:var(--success); color:var(--success-foreground); } .ac-n { background:var(--secondary); color:var(--secondary-foreground); }
+  .person-group { border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:16px; background:var(--card); }
+  .pg-head { display:flex; align-items:center; gap:9px; padding:11px 14px; background:var(--surface-2); border-bottom:1px solid var(--border); }
+  .pg-body { padding:14px; display:flex; flex-direction:column; gap:14px; }
+  .qblock label { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; margin-bottom:7px; }
+  .qtag { font-size:10.5px; color:var(--muted-foreground); font-weight:500; background:var(--muted); padding:2px 7px; border-radius:var(--radius-full); }
+  .qinput { width:100%; border:1px solid var(--input); border-radius:var(--radius-sm); background:var(--background); color:var(--foreground); padding:9px 11px; font:inherit; font-size:13.5px; }
+  textarea.qinput { min-height:70px; resize:vertical; }
+  .ctx-card { border:1px dashed color-mix(in srgb,var(--ai-origin) 45%,transparent); background:color-mix(in srgb,var(--ai-origin-bg) 60%,var(--card)); border-radius:var(--radius-md); padding:11px; }
+  .ctx-row { display:flex; align-items:center; gap:8px; padding:7px 0; }
+  .ctx-row + .ctx-row { border-top:1px solid var(--border); }
+  .mf-check { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .mf-check li { display:flex; align-items:center; gap:9px; font-size:13.5px; }
+  .cbox { width:18px; height:18px; border-radius:5px; border:1.5px solid var(--input); flex:none; display:grid; place-items:center; }
+  .cbox.done { background:var(--success); border-color:var(--success); color:var(--success-foreground); } .cbox.done svg{width:12px;height:12px}
+  .submit-bar { position:sticky; bottom:0; display:flex; align-items:center; gap:12px; padding:13px 0; margin-top:8px; background:linear-gradient(transparent, var(--background) 30%); }
+  @media (max-width:760px){ .submit-bar { bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom)); } }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.48 14.14a2 2 0 0 0 1.71 3h16.96a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></symbol>
+<symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+<symbol id="i-board" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></symbol>
+<symbol id="i-gavel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 10-7 7M13 5l6 6M11 7l6 6M3 21h8"/></symbol>
+<symbol id="i-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></symbol>
+<symbol id="i-cog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.2A1.6 1.6 0 0 0 7 19.5l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4.6 15H4.4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 6.5 8.3l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H11a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7-1.1l-.1.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V11a2 2 0 1 1 0 4h-.2Z"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22V4"/></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4-2v-4Z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+<symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></symbol>
+<symbol id="i-quote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h4v4a4 4 0 0 1-4 4M15 8h4v4a4 4 0 0 1-4 4"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></symbol>
+<symbol id="i-msg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2Z"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 7-7M14 8h5v5"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6.5A4 4 0 0 0 13 4h-2a3.5 3.5 0 0 0 0 7h2a3.5 3.5 0 0 1 0 7h-2.5A4 4 0 0 1 7 17.5"/></symbol>
+<symbol id="i-checkcircle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+</defs></svg>
+<div class="app">
+  <aside class="sidebar"><div class="logo">E</div>
+    <a class="nav-item" href="06-dashboard-member.html" title="Dashboard"><svg><use href="#i-dash"/></svg></a>
+    <a class="nav-item" href="01-board.html" title="Board"><svg><use href="#i-board"/></svg></a>
+    <a class="nav-item active" href="08-meetings-hub.html" title="Meetings"><svg><use href="#i-mic"/></svg></a>
+    <a class="nav-item" href="09-decision-log.html" title="Decisions"><svg><use href="#i-gavel"/></svg></a>
+    <a class="nav-item" href="08-meetings-hub.html" title="Archive"><svg><use href="#i-archive"/></svg></a>
+    <div class="nav-spacer"></div>
+    <a class="nav-item" href="#" title="Admin"><svg><use href="#i-cog"/></svg></a></aside>
+  <div class="main">
+    <header class="topbar">
+      <strong class="hide-mobile" style="font-size:14px">Daily sync</strong>
+      <div class="search"><svg><use href="#i-search"/></svg><span class="grow">Search tasks, meetings, decisions…</span><span class="kbd hide-mobile">⌘K</span></div>
+      
+      <button class="btn btn-outline btn-icon" onclick="toggleTheme()" id="tt" title="Toggle theme"><svg class="ic-moon"><use href="#i-moon"/></svg><svg class="ic-sun" style="display:none"><use href="#i-sun"/></svg></button>
+    </header>
+    <div class="page">
+
+      <div class="mf-wrap">
+        <div class="mf-head">
+          <div class="col" style="gap:2px"><h1 class="t-h1">Daily sync — Thu 21 Sep</h1><span class="t-sm muted mono">09:30 · 2 participants</span></div>
+          <div class="grow"></div>
+          <span class="presence"><span class="avatar avatar-sm av-1">BM</span><span class="live"></span>Bitchiko is here</span>
+          <span class="autosave"><svg><use href="#i-save"/></svg>Autosaved 12s ago</span>
+        </div>
+
+        <div class="agenda-strip">
+          <div class="row between" style="margin-bottom:10px"><span class="t-label" style="color:var(--ai-origin-fg)">Agenda suggestions</span><span class="ai-tag"><svg><use href="#i-ai"/></svg>from last 2 meetings</span></div>
+          <div class="row wrap" style="gap:8px">
+            <span class="agenda-chip">Transceiver ETA for EH-482<button class="ac-y"><svg><use href="#i-check"/></svg></button><button class="ac-n"><svg><use href="#i-x"/></svg></button></span>
+            <span class="agenda-chip">FaceGate crash logs review<button class="ac-y"><svg><use href="#i-check"/></svg></button><button class="ac-n"><svg><use href="#i-x"/></svg></button></span>
+            <span class="agenda-chip">Approve PETG-CF filament order<button class="ac-y"><svg><use href="#i-check"/></svg></button><button class="ac-n"><svg><use href="#i-x"/></svg></button></span>
+          </div>
+        </div>
+
+        <!-- per-person group: Nikoloz -->
+        <div class="person-group">
+          <div class="pg-head"><span class="avatar avatar-sm av-4">NK</span><strong class="t-sm grow">Nikoloz Kapanadze</strong><span class="t-2xs muted">Firmware</span></div>
+          <div class="pg-body">
+            <div class="ctx-card">
+              <div class="row between" style="margin-bottom:4px"><span class="t-label" style="color:var(--ai-origin-fg)">Your in-progress cards — confirm or adjust</span><span class="ai-tag"><svg><use href="#i-ai"/></svg>AI</span></div>
+              <div class="ctx-row"><span class="mono t-2xs muted">EH-489</span><span class="t-sm grow">FaceGate cold-boot handshake</span><button class="btn btn-sm btn-outline">Confirm</button><button class="btn btn-sm btn-ghost">Adjust</button></div>
+              <div class="ctx-row"><span class="mono t-2xs muted">EH-482</span><span class="t-sm grow">CAN reader hangs on reconnect</span><button class="btn btn-sm btn-outline">Confirm</button><button class="btn btn-sm btn-ghost">Adjust</button></div>
+            </div>
+            <div class="qblock"><label>What did you ship yesterday?<span class="qtag">long text</span></label><textarea class="qinput">Flashed v1.4.0-rc2 to the pilot ESP32; camera handshake now succeeds on cold boot.</textarea></div>
+            <div class="qblock"><label>Blockers today?<span class="qtag">short text</span></label><input class="qinput" value="CAN reader still waiting on the transceiver"></div>
+            <div class="qblock"><label>Daily checklist<span class="qtag">checklist</span></label>
+              <ul class="mf-check">
+                <li><span class="cbox done"><svg><use href="#i-check"/></svg></span>Pushed branches to CI</li>
+                <li><span class="cbox"></span>Updated the pilot changelog</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- per-person group: Bitchiko (repeats per participant; scales to ~10) -->
+        <div class="person-group">
+          <div class="pg-head"><span class="avatar avatar-sm av-1">BM</span><strong class="t-sm grow">Bitchiko Meladze</strong><span class="t-2xs muted">Hardware</span></div>
+          <div class="pg-body">
+            <div class="qblock"><label>What did you ship yesterday?<span class="qtag">long text</span></label><textarea class="qinput" placeholder="Type here…"></textarea></div>
+            <div class="qblock"><label>Blockers today?<span class="qtag">short text</span></label><input class="qinput" placeholder="Anything in your way?"></div>
+          </div>
+        </div>
+
+        <div class="qblock" style="margin-bottom:16px"><label>Additional notes<span class="qtag">team-wide · optional</span></label><textarea class="qinput" placeholder="Anything else for the record…"></textarea></div>
+
+        <div class="submit-bar">
+          <span class="t-sm muted grow">On submit, the AI extracts tasks &amp; decisions for you to confirm.</span>
+          <button class="btn btn-ghost">Save draft</button>
+          <button class="btn btn-primary"><svg><use href="#i-check"/></svg>Submit meeting</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<nav class="bottom-nav"><a class="nav-item" href="06-dashboard-member.html"><svg><use href="#i-dash"/></svg>Home</a><a class="nav-item" href="01-board.html"><svg><use href="#i-board"/></svg>Board</a><a class="nav-item active" href="08-meetings-hub.html"><svg><use href="#i-mic"/></svg>Meetings</a><a class="nav-item" href="09-decision-log.html"><svg><use href="#i-gavel"/></svg>Decisions</a><a class="nav-item" href="08-meetings-hub.html"><svg><use href="#i-archive"/></svg>Archive</a></nav>
+
+<script>
+(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('eh-theme') || 'dark'); })();
+function toggleTheme(){ var d=document.documentElement,t=d.getAttribute('data-theme')==='dark'?'light':'dark'; d.setAttribute('data-theme',t); localStorage.setItem('eh-theme',t); syncTT(); }
+function syncTT(){ var dark=document.documentElement.getAttribute('data-theme')==='dark',b=document.getElementById('tt'); if(!b)return; b.querySelector('.ic-moon').style.display=dark?'':'none'; b.querySelector('.ic-sun').style.display=dark?'none':''; }
+syncTT();
+</script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board — Engineering Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="base.css">
+<style>
+  .board-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .seg { display: inline-flex; padding: 2px; background: var(--muted); border-radius: var(--radius-md); border: 1px solid var(--border); }
+  .seg button { border: none; background: transparent; color: var(--muted-foreground); font: inherit; font-size: 12.5px; font-weight: 500;
+    padding: 5px 11px; border-radius: var(--radius-sm); cursor: pointer; }
+  .seg button.on { background: var(--card); color: var(--foreground); box-shadow: var(--shadow-xs); }
+  .filter-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 11px; border-radius: var(--radius-full);
+    border: 1px solid var(--border); background: var(--card); color: var(--foreground); cursor: pointer; }
+  .filter-chip svg { width: 13px; height: 13px; color: var(--muted-foreground); }
+
+  .obj-strip { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .obj-strip .hd { display: flex; align-items: center; gap: 8px; }
+  .obj-row { display: flex; align-items: center; gap: 10px; padding: 7px 11px; border-radius: var(--radius-md);
+    background: var(--card); border: 1px solid var(--border); }
+  .obj-row .nm { font-size: 13px; font-weight: 500; }
+  .obj-row .progress { width: 130px; flex: none; }
+  @media (max-width:760px){ .obj-row .progress { width: 84px; } .obj-row .nm { font-size: 12.5px; } }
+
+  .board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; align-items: flex-start; scroll-snap-type: x proximity; }
+  .column { flex: 0 0 292px; display: flex; flex-direction: column; gap: 9px; scroll-snap-align: start; }
+  @media (max-width:760px){ .column { flex: 0 0 86vw; } .board { gap: 10px; } }
+  .col-head { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: var(--radius-md);
+    background: var(--card); border: 1px solid var(--border); border-top: 2px solid var(--c); position: sticky; top: 0; }
+  .col-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+  .col-head .nm { font-weight: 600; font-size: 13px; }
+  .col-head .ct { font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); background: var(--muted); padding: 1px 7px; border-radius: var(--radius-full); }
+  .col-head .wip { font-size: 10.5px; color: var(--muted-foreground); }
+  .col-head.loud { background: var(--col-blocked-bg); border-color: color-mix(in srgb,var(--col-blocked) 45%,transparent); }
+  .col-head.loud .nm { color: var(--col-blocked-fg); }
+  .col-body { display: flex; flex-direction: column; gap: 9px; min-height: 40px; padding: 3px; border-radius: var(--radius-md); }
+
+  .tcard { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 10px 11px; box-shadow: var(--shadow-xs); display: flex; flex-direction: column; gap: 8px; cursor: grab; }
+  .tcard:hover { border-color: var(--muted-foreground); }
+  .tcard.blocked { border-left: 3px solid var(--col-blocked); }
+  .tc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tc-title { margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+  .tc-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tc-blockrow { font-size: 11.5px; padding: 6px 8px; border-radius: var(--radius-sm); display: flex; gap: 6px; align-items: flex-start;
+    background: var(--col-blocked-bg); color: var(--col-blocked-fg); }
+  .tc-blockrow svg { width: 13px; height: 13px; flex: none; margin-top: 1px; }
+  .tc-foot { display: flex; align-items: center; gap: 7px; }
+  .type-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 7px 3px 6px; border-radius: var(--radius-sm); }
+  .type-chip svg { width: 12px; height: 12px; flex: none; }
+
+  .ghost { opacity: .5; border: 1.5px dashed var(--primary); background: var(--accent); cursor: grabbing; }
+  .drop-slot { height: 58px; border: 1.5px dashed var(--primary); border-radius: var(--radius-md); background: color-mix(in srgb,var(--primary) 8%,transparent); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.48 14.14a2 2 0 0 0 1.71 3h16.96a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="i-board" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></symbol>
+  <symbol id="i-gavel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 10-7 7M13 5l6 6M11 7l6 6M3 21h8"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.2A1.6 1.6 0 0 0 7 19.5l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 4.6 15H4.4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 6.5 8.3l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H11a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7-1.1l-.1.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V11a2 2 0 1 1 0 4h-.2Z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22V4"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4-2v-4Z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></symbol>
+</defs></svg>
+
+<div class="app">
+  <!-- desktop sidebar -->
+  <aside class="sidebar">
+    <div class="logo">E</div>
+    <a class="nav-item" href="06-dashboard-member.html" title="Dashboard"><svg><use href="#i-dash"/></svg></a>
+    <a class="nav-item active" href="01-board.html" title="Board"><svg><use href="#i-board"/></svg></a>
+    <a class="nav-item" href="08-meetings-hub.html" title="Meetings"><svg><use href="#i-mic"/></svg></a>
+    <a class="nav-item" href="09-decision-log.html" title="Decisions"><svg><use href="#i-gavel"/></svg></a>
+    <a class="nav-item" href="08-meetings-hub.html" title="Archive"><svg><use href="#i-archive"/></svg></a>
+    <div class="nav-spacer"></div>
+    <a class="nav-item" href="#" title="Admin"><svg><use href="#i-cog"/></svg></a>
+  </aside>
+
+  <div class="main">
+    <!-- topbar -->
+    <header class="topbar">
+      <strong class="hide-mobile" style="font-size:14px">Board</strong>
+      <div class="search"><svg><use href="#i-search"/></svg><span class="grow">Search tasks, meetings, decisions…</span><span class="kbd hide-mobile">⌘K</span></div>
+      <div class="next-meeting hide-mobile"><span class="pulse"></span><svg><use href="#i-cal"/></svg>Daily sync · in 22 min</div>
+      <button class="btn btn-outline btn-icon" onclick="toggleTheme()" id="tt" title="Toggle theme"><svg class="ic-moon"><use href="#i-moon"/></svg><svg class="ic-sun" style="display:none"><use href="#i-sun"/></svg></button>
+      <button class="btn btn-primary hide-mobile"><svg><use href="#i-plus"/></svg>New task</button>
+    </header>
+
+    <div class="page">
+      <!-- objectives pinned above -->
+      <div class="obj-strip">
+        <div class="hd"><span class="t-label">This week · objectives</span><span class="t-2xs muted num">Week 38 · 21–27 Sep</span></div>
+        <div class="obj-row">
+          <span class="badge badge-square" style="background:var(--obj-active-bg);color:var(--obj-active-fg)">Active</span>
+          <span class="nm grow">Ship FaceGate v1.4 to the pilot door</span>
+          <span class="num t-xs muted">3/5</span>
+          <span class="progress"><span style="width:60%;background:var(--obj-active)"></span></span>
+        </div>
+        <div class="obj-row">
+          <span class="badge badge-square" style="background:var(--obj-active-bg);color:var(--obj-active-fg)">Active</span>
+          <span class="nm grow">Close 6 open service-dept requests</span>
+          <span class="num t-xs muted">4/6</span>
+          <span class="progress"><span style="width:66%;background:var(--obj-active)"></span></span>
+        </div>
+      </div>
+
+      <!-- toolbar -->
+      <div class="board-toolbar">
+        <span class="t-label hide-mobile">Swimlanes</span>
+        <div class="seg">
+          <button class="on">None</button><button>Project</button><button>Assignee</button><button>Type</button>
+        </div>
+        <div class="grow"></div>
+        <button class="filter-chip"><svg><use href="#i-filter"/></svg>P1 only</button>
+        <button class="filter-chip"><span class="chip-dot" style="background:var(--project-1)"></span>FaceGate</button>
+        <button class="filter-chip"><svg><use href="#i-ai"/></svg>AI-proposed</button>
+      </div>
+
+      <!-- board -->
+      <div class="board">
+        <!-- Backlog -->
+        <section class="column" style="--c:var(--col-backlog)">
+          <div class="col-head"><span class="dot"></span><span class="nm">Backlog</span><span class="ct">5</span></div>
+          <div class="col-body">
+            <article class="tcard">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-internal-bg);color:var(--type-internal-fg)"><svg><use href="#i-board"/></svg>Internal</span><span class="mono t-2xs muted">EH-455</span></div>
+              <p class="tc-title">OTA rollback path for ESP32 fleet</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p2-bg);color:var(--priority-p2-fg)"><svg><use href="#i-flag"/></svg>P2</span></div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-3)"></span><span class="t-2xs muted grow">ESP32 fleet</span><span class="avatar av-4">NK</span></div>
+            </article>
+            <article class="tcard">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-internal-bg);color:var(--type-internal-fg)"><svg><use href="#i-board"/></svg>Internal</span><span class="mono t-2xs muted">EH-460</span></div>
+              <p class="tc-title">Evaluate SocketCAN vs. slcan latency</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p3-bg);color:var(--priority-p3-fg)"><svg><use href="#i-flag"/></svg>P3</span><span class="badge" style="background:var(--badge-stale-bg);color:var(--badge-stale-fg)"><svg><use href="#i-clock"/></svg>Stale 12d</span></div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-2)"></span><span class="t-2xs muted grow">CAN Reader</span><span class="avatar av-1">BM</span></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- This week -->
+        <section class="column" style="--c:var(--col-thisweek)">
+          <div class="col-head"><span class="dot"></span><span class="nm">This week</span><span class="ct">3</span></div>
+          <div class="col-body">
+            <article class="tcard">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-service-bg);color:var(--type-service-fg)"><svg><use href="#i-ext"/></svg>Service · G. Beridze</span><span class="mono t-2xs muted">EH-501</span></div>
+              <p class="tc-title">Print 4× enclosure brackets for diagnostics rig</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p2-bg);color:var(--priority-p2-fg)"><svg><use href="#i-flag"/></svg>P2</span><span class="ai-tag"><svg><use href="#i-ai"/></svg>AI</span></div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-5)"></span><span class="t-2xs muted grow">Service dept · print job</span><span class="avatar av-1">BM</span></div>
+            </article>
+            <article class="tcard">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-internal-bg);color:var(--type-internal-fg)"><svg><use href="#i-board"/></svg>Internal</span><span class="mono t-2xs muted">EH-498</span></div>
+              <p class="tc-title">Wire FaceGate crash logs to Sentry</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p1-bg);color:var(--priority-p1-fg)"><svg><use href="#i-flag"/></svg>P1</span></div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-1)"></span><span class="t-2xs muted grow">FaceGate</span><span class="avatar av-4">NK</span></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- In progress -->
+        <section class="column" style="--c:var(--col-inprogress)">
+          <div class="col-head"><span class="dot"></span><span class="nm">In progress</span><span class="ct">2</span><span class="grow"></span><span class="wip">WIP 2/3</span></div>
+          <div class="col-body">
+            <article class="tcard">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-internal-bg);color:var(--type-internal-fg)"><svg><use href="#i-board"/></svg>Internal</span><span class="mono t-2xs muted">EH-489</span></div>
+              <p class="tc-title">FaceGate v1.4 cold-boot camera handshake</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p1-bg);color:var(--priority-p1-fg)"><svg><use href="#i-flag"/></svg>P1</span></div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-1)"></span><span class="t-2xs muted grow">FaceGate</span><span class="avatar av-4">NK</span></div>
+            </article>
+            <!-- drag state demo -->
+            <div class="drop-slot"></div>
+            <article class="tcard ghost">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-internal-bg);color:var(--type-internal-fg)"><svg><use href="#i-board"/></svg>Internal</span><span class="mono t-2xs muted">EH-476</span></div>
+              <p class="tc-title">Debounce reconnect in diagnostics app</p>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-4)"></span><span class="t-2xs muted grow">Diagnostics · dragging…</span><span class="avatar av-1">BM</span></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Blocked — loudest -->
+        <section class="column" style="--c:var(--col-blocked)">
+          <div class="col-head loud"><span class="dot"></span><span class="nm">Blocked</span><span class="ct">2</span><span class="grow"></span><span class="wip">needs a decision</span></div>
+          <div class="col-body">
+            <article class="tcard blocked">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-internal-bg);color:var(--type-internal-fg)"><svg><use href="#i-board"/></svg>Internal</span><span class="mono t-2xs muted">EH-482</span></div>
+              <p class="tc-title">CAN bus reader hangs on reconnect</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p1-bg);color:var(--priority-p1-fg)"><svg><use href="#i-flag"/></svg>P1</span><span class="badge" style="background:var(--badge-overdue-bg);color:var(--badge-overdue-fg)"><svg><use href="#i-clock"/></svg>Overdue 3d</span></div>
+              <div class="tc-blockrow"><svg><use href="#i-alert"/></svg>Waiting on replacement transceiver — ordered 18 Sep, ETA Fri</div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-2)"></span><span class="t-2xs muted grow">CAN Reader</span><span class="avatar av-4">NK</span></div>
+            </article>
+            <article class="tcard blocked">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-print-bg);color:var(--type-print-fg)"><svg><use href="#i-print"/></svg><svg style="margin-left:-2px"><use href="#i-ext"/></svg>Print · Service</span><span class="mono t-2xs muted">EH-503</span></div>
+              <p class="tc-title">Reprint gateway lid — wrong tolerance on v1</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p2-bg);color:var(--priority-p2-fg)"><svg><use href="#i-flag"/></svg>P2</span><span class="ai-tag"><svg><use href="#i-ai"/></svg>AI</span></div>
+              <div class="tc-blockrow"><svg><use href="#i-alert"/></svg>Filament out of stock — need PETG-CF order approved</div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-8)"></span><span class="t-2xs muted grow">Gateway · req. G. Beridze</span><span class="avatar av-1">BM</span></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Review -->
+        <section class="column" style="--c:var(--col-review)">
+          <div class="col-head"><span class="dot"></span><span class="nm">Review</span><span class="ct">1</span></div>
+          <div class="col-body">
+            <article class="tcard">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-internal-bg);color:var(--type-internal-fg)"><svg><use href="#i-board"/></svg>Internal</span><span class="mono t-2xs muted">EH-471</span></div>
+              <p class="tc-title">PR #212 — keepalive for slcan socket</p>
+              <div class="tc-badges"><span class="badge" style="background:var(--priority-p1-bg);color:var(--priority-p1-fg)"><svg><use href="#i-flag"/></svg>P1</span></div>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-2)"></span><span class="t-2xs muted grow">reviewing: Bitchiko</span><span class="avatar av-4">NK</span></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Done -->
+        <section class="column" style="--c:var(--col-done)">
+          <div class="col-head"><span class="dot"></span><span class="nm">Done</span><span class="ct">1</span><span class="grow"></span><span class="wip">this week</span></div>
+          <div class="col-body">
+            <article class="tcard" style="opacity:.82">
+              <div class="tc-top"><span class="type-chip" style="background:var(--type-service-bg);color:var(--type-service-fg)"><svg><use href="#i-ext"/></svg>Service · N. Kapanadze</span><span class="mono t-2xs muted">EH-467</span></div>
+              <p class="tc-title" style="text-decoration:line-through;text-decoration-color:var(--muted-foreground)">Flash 6 diagnostics units for the workshop</p>
+              <div class="tc-foot"><span class="chip-dot" style="background:var(--project-4)"></span><span class="t-2xs muted grow">Diagnostics</span><span class="avatar av-1">BM</span></div>
+            </article>
+            <!-- empty-state demo inside a column -->
+            <div class="empty" style="padding:20px 14px"><svg><use href="#i-check"/></svg><span class="title" style="font-size:13px">Cleared out</span><span class="t-2xs">Nothing else finished this week — yet.</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile bottom nav + FAB -->
+<nav class="bottom-nav">
+  <a class="nav-item" href="06-dashboard-member.html"><svg><use href="#i-dash"/></svg>Home</a>
+  <a class="nav-item active" href="01-board.html"><svg><use href="#i-board"/></svg>Board</a>
+  <a class="nav-item" href="08-meetings-hub.html"><svg><use href="#i-mic"/></svg>Meetings</a>
+  <a class="nav-item" href="09-decision-log.html"><svg><use href="#i-gavel"/></svg>Decisions</a>
+  <a class="nav-item" href="08-meetings-hub.html"><svg><use href="#i-archive"/></svg>Archive</a>
+</nav>
+<button class="fab" title="New task / start meeting"><svg><use href="#i-plus"/></svg></button>
+
+<script>
+(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('eh-theme') || 'dark'); })();
+function toggleTheme(){
+  var d = document.documentElement, t = d.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  d.setAttribute('data-theme', t); localStorage.setItem('eh-theme', t); syncTT();
+}
+function syncTT(){ var dark = document.documentElement.getAttribute('data-theme') === 'dark', b = document.getElementById('tt'); if(!b) return;
+  b.querySelector('.ic-moon').style.display = dark ? '' : 'none'; b.querySelector('.ic-sun').style.display = dark ? 'none' : ''; }
+syncTT();
+</script>
+</body>
+</html>
