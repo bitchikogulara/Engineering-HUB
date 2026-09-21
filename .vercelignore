@@ -1,0 +1,9 @@
+# Never ship local env or secrets in a CLI deployment —
+# production config lives in Vercel project env vars only.
+.env
+.env.*
+!.env.example
+design/
+tests/
+.github/
+.agents/
