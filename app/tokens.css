@@ -1,0 +1,283 @@
+/* ============================================================
+   Engineering Hub — design tokens
+   :root = light (default fallback).  [data-theme="dark"] = dark.
+   Dark is the first-class theme (workshop evenings) — the app boots
+   into dark unless the user has chosen otherwise.
+   Names map 1:1 onto shadcn/ui + Tailwind CSS variables so the
+   implementation can consume this file directly.
+   Every color the app uses is defined here. Pages reference var(--…)
+   only — a raw hex in a page stylesheet is a bug.
+   ============================================================ */
+
+:root,
+[data-theme="light"] {
+  /* ---- shadcn / Tailwind core ---- */
+  --background: #f5f6f8;
+  --foreground: #12151c;
+  --card: #ffffff;
+  --card-foreground: #12151c;
+  --popover: #ffffff;
+  --popover-foreground: #12151c;
+  --primary: #2f5fd8;
+  --primary-foreground: #ffffff;
+  --secondary: #e9ecf1;
+  --secondary-foreground: #1b2029;
+  --muted: #eceef2;
+  --muted-foreground: #59616f;
+  --accent: #e6ebf6;
+  --accent-foreground: #1b2b4d;
+  --destructive: #cf2c2c;
+  --destructive-foreground: #ffffff;
+  --success: #167c3b;
+  --success-foreground: #ffffff;
+  --warning: #9a6100;
+  --warning-foreground: #ffffff;
+  --border: #dde1e8;
+  --input: #d3d8e0;
+  --ring: #2f5fd8;
+
+  /* surfaces used across the shell */
+  --surface-1: #ffffff; /* cards */
+  --surface-2: #f0f2f5; /* column body, sunken areas */
+  --surface-3: #e7eaef; /* deepest sunken / rails */
+  --overlay: rgba(18, 21, 28, 0.42);
+
+  /* ---- radius ---- */
+  --radius: 10px; /* shadcn base */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  /* ---- elevation ---- */
+  --shadow-xs: 0 1px 2px rgba(16, 22, 34, 0.06);
+  --shadow-sm:
+    0 1px 2px rgba(16, 22, 34, 0.08), 0 1px 1px rgba(16, 22, 34, 0.04);
+  --shadow-md:
+    0 4px 12px rgba(16, 22, 34, 0.1), 0 1px 3px rgba(16, 22, 34, 0.06);
+  --shadow-lg:
+    0 12px 32px rgba(16, 22, 34, 0.16), 0 4px 10px rgba(16, 22, 34, 0.08);
+  --shadow-sheet: -18px 0 40px rgba(16, 22, 34, 0.16);
+
+  /* ---- typography ---- */
+  --font-sans:
+    "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* =========================================================
+     SEMANTIC — the app's meaning colors.
+     Each set: solid (line/dot/text), -bg (fill), -fg (text on -bg).
+     Tuned for WCAG AA in this (light) theme.
+     ========================================================= */
+
+  /* board columns — Blocked is deliberately the loudest */
+  --col-backlog: #64748b;
+  --col-backlog-bg: #eef1f5;
+  --col-backlog-fg: #3d4657;
+  --col-thisweek: #4f46e5;
+  --col-thisweek-bg: #ecebfd;
+  --col-thisweek-fg: #362fb0;
+  --col-inprogress: #0284c7;
+  --col-inprogress-bg: #e2f1fb;
+  --col-inprogress-fg: #0b5f8f;
+  --col-blocked: #e11d1d;
+  --col-blocked-bg: #fde5e4;
+  --col-blocked-fg: #a51212;
+  --col-review: #0d9488;
+  --col-review-bg: #dcf3ef;
+  --col-review-fg: #0a685f;
+  --col-done: #16833f;
+  --col-done-bg: #dff2e5;
+  --col-done-fg: #0f6330;
+
+  /* priorities */
+  --priority-p1: #dc2626;
+  --priority-p1-bg: #fde5e4;
+  --priority-p1-fg: #a51212;
+  --priority-p2: #b45309;
+  --priority-p2-bg: #fbedda;
+  --priority-p2-fg: #8a4208;
+  --priority-p3: #5b6472;
+  --priority-p3-bg: #eef0f3;
+  --priority-p3-fg: #454d5a;
+
+  /* objective states */
+  --obj-planned: #64748b;
+  --obj-planned-bg: #eef1f5;
+  --obj-planned-fg: #3d4657;
+  --obj-active: #2f5fd8;
+  --obj-active-bg: #e6ecfb;
+  --obj-active-fg: #23499f;
+  --obj-achieved: #16833f;
+  --obj-achieved-bg: #dff2e5;
+  --obj-achieved-fg: #0f6330;
+  --obj-missed: #dc2626;
+  --obj-missed-bg: #fde5e4;
+  --obj-missed-fg: #a51212;
+  --obj-rolled: #b45309;
+  --obj-rolled-bg: #fbedda;
+  --obj-rolled-fg: #8a4208;
+
+  /* status badges */
+  --badge-stale: #b45309;
+  --badge-stale-bg: #fbedda;
+  --badge-stale-fg: #8a4208;
+  --badge-overdue: #dc2626;
+  --badge-overdue-bg: #fde5e4;
+  --badge-overdue-fg: #a51212;
+
+  /* AI provenance marker — a distinct hue reserved for AI, used nowhere else */
+  --ai-origin: #7c3aed;
+  --ai-origin-bg: #f0e9fe;
+  --ai-origin-fg: #5b21b6;
+  --ai-ring: #a884f3;
+
+  /* confidence */
+  --confidence-high: #16833f;
+  --confidence-med: #b45309;
+  --confidence-low: #dc2626;
+
+  /* task types (admin-assignable; starter set). External types carry an arrow-in cue. */
+  --type-internal: #2f5fd8;
+  --type-internal-bg: #e6ecfb;
+  --type-internal-fg: #23499f;
+  --type-service: #b45309;
+  --type-service-bg: #fbedda;
+  --type-service-fg: #8a4208;
+  --type-print: #7c3aed;
+  --type-print-bg: #f0e9fe;
+  --type-print-fg: #5b21b6;
+
+  /* project accents — ~10 distinguishable hues, admin-assignable */
+  --project-1: #e0574a;
+  --project-2: #e08a2f;
+  --project-3: #c39307;
+  --project-4: #4f9d3f;
+  --project-5: #159b8c;
+  --project-6: #2f7fc9;
+  --project-7: #5b5fd8;
+  --project-8: #9b4fc7;
+  --project-9: #c7469b;
+  --project-10: #6b7a8c;
+}
+
+[data-theme="dark"] {
+  /* ---- shadcn / Tailwind core ---- */
+  --background: #0b0e14;
+  --foreground: #e5e8ef;
+  --card: #12161f;
+  --card-foreground: #e5e8ef;
+  --popover: #161b26;
+  --popover-foreground: #e5e8ef;
+  --primary: #5f8bef;
+  --primary-foreground: #0a0d13;
+  --secondary: #1b212c;
+  --secondary-foreground: #e5e8ef;
+  --muted: #171d27;
+  --muted-foreground: #98a2b3;
+  --accent: #1d2634;
+  --accent-foreground: #cdd9f0;
+  --destructive: #f0554f;
+  --destructive-foreground: #0a0d13;
+  --success: #43c46f;
+  --success-foreground: #0a0d13;
+  --warning: #e0a13a;
+  --warning-foreground: #0a0d13;
+  --border: #242c39;
+  --input: #2a3342;
+  --ring: #5f8bef;
+
+  --surface-1: #12161f;
+  --surface-2: #0f131b;
+  --surface-3: #090c11;
+  --overlay: rgba(3, 5, 9, 0.62);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6), 0 6px 14px rgba(0, 0, 0, 0.45);
+  --shadow-sheet: -18px 0 48px rgba(0, 0, 0, 0.55);
+
+  /* ---- semantic (dark-tuned; brighter lines, deep desaturated fills, AA text) ---- */
+  --col-backlog: #8a94a6;
+  --col-backlog-bg: #1a212c;
+  --col-backlog-fg: #b6bfce;
+  --col-thisweek: #8a86f5;
+  --col-thisweek-bg: #1d1f3a;
+  --col-thisweek-fg: #b7b4fb;
+  --col-inprogress: #38b6f0;
+  --col-inprogress-bg: #0e2634;
+  --col-inprogress-fg: #7fd0f6;
+  --col-blocked: #ff5a52;
+  --col-blocked-bg: #341215;
+  --col-blocked-fg: #ff9b95;
+  --col-review: #2dd4bf;
+  --col-review-bg: #0c2a28;
+  --col-review-fg: #7ce6d8;
+  --col-done: #40c66f;
+  --col-done-bg: #0e2a1a;
+  --col-done-fg: #74dd97;
+
+  --priority-p1: #ff5a52;
+  --priority-p1-bg: #341215;
+  --priority-p1-fg: #ff9b95;
+  --priority-p2: #e0a13a;
+  --priority-p2-bg: #2c2110;
+  --priority-p2-fg: #eec27a;
+  --priority-p3: #98a2b3;
+  --priority-p3-bg: #1a212c;
+  --priority-p3-fg: #b6bfce;
+
+  --obj-planned: #8a94a6;
+  --obj-planned-bg: #1a212c;
+  --obj-planned-fg: #b6bfce;
+  --obj-active: #5f8bef;
+  --obj-active-bg: #14213b;
+  --obj-active-fg: #9dbaf6;
+  --obj-achieved: #40c66f;
+  --obj-achieved-bg: #0e2a1a;
+  --obj-achieved-fg: #74dd97;
+  --obj-missed: #ff5a52;
+  --obj-missed-bg: #341215;
+  --obj-missed-fg: #ff9b95;
+  --obj-rolled: #e0a13a;
+  --obj-rolled-bg: #2c2110;
+  --obj-rolled-fg: #eec27a;
+
+  --badge-stale: #e0a13a;
+  --badge-stale-bg: #2c2110;
+  --badge-stale-fg: #eec27a;
+  --badge-overdue: #ff5a52;
+  --badge-overdue-bg: #341215;
+  --badge-overdue-fg: #ff9b95;
+
+  --ai-origin: #a884f3;
+  --ai-origin-bg: #201a37;
+  --ai-origin-fg: #c9b4f9;
+  --ai-ring: #7c3aed;
+
+  --confidence-high: #40c66f;
+  --confidence-med: #e0a13a;
+  --confidence-low: #ff5a52;
+
+  --type-internal: #5f8bef;
+  --type-internal-bg: #14213b;
+  --type-internal-fg: #9dbaf6;
+  --type-service: #e0a13a;
+  --type-service-bg: #2c2110;
+  --type-service-fg: #eec27a;
+  --type-print: #a884f3;
+  --type-print-bg: #201a37;
+  --type-print-fg: #c9b4f9;
+
+  --project-1: #f0705f;
+  --project-2: #f0a04a;
+  --project-3: #d9b431;
+  --project-4: #62b850;
+  --project-5: #2bb8a6;
+  --project-6: #4f9be0;
+  --project-7: #7d81f0;
+  --project-8: #b672e0;
+  --project-9: #e066b4;
+  --project-10: #8a99ad;
+}
