@@ -266,6 +266,10 @@ flowchart TD
 
 Max 5 questions per round, asked in one batch (not a drip); the user can answer or skip each; skipped items land in the proposal marked "needs attention". Duplicate detection is always on: anything resembling an existing open card becomes a question, never a silent duplicate.
 
+**Step 2b — Feedback & revision loop.** The proposal screen carries a free-text feedback box. If the team dislikes the proposal (wrong grouping, wrong owner, missed item, over-splitting), they describe what to change; the AI re-extracts with that feedback applied and presents a revised proposal. Rounds repeat until the team confirms. All feedback exchanges are stored with the meeting record.
+
+**Step 2c — Instruction self-tuning.** After confirming a meeting that required feedback, a tuning step compares the AI's first proposal against the finally-accepted result plus the feedback given, and proposes a concrete edit to that meeting type's extraction-instructions block — presented to the admin as a diff. Approving it creates a new template version (instructions only); rejecting discards it. The AI never silently rewrites its own instructions — same confirm-before-write principle as board changes. This is the primary mechanism for reaching the ≥80 % acceptance target during the first weeks.
+
 **Step 3 — Proposal screen.** A diff view: left, the meeting source; right, proposed cards/updates, each editable inline, each with accept / edit / reject. "Confirm all" applies everything accepted in one transaction. Nothing touches the board before this click.
 
 **Step 4 — Write + trace.** Applied items are created/updated with origin = this meeting; the meeting record stores what was applied and what was rejected. Every AI-created card shows a small badge linking back to its source meeting and quote.
@@ -458,6 +462,8 @@ Each requirement is a testable statement; the phase column maps to §12. "Shall"
 | FR-24 | AI-created/updated cards display an origin badge linking to the source meeting and quote | 3 |
 | FR-25 | Processing is asynchronous: submit returns immediately, status is visible live; API failure or twice-invalid JSON leaves the meeting saved as "pending processing" with a retry button — zero data loss | 3 |
 | FR-26 | Prompts are versioned files in `/ai/prompts/`; every API call logs tokens and cost | 3 |
+| FR-46 | The proposal screen accepts free-text feedback; the AI re-extracts with the feedback applied and presents a revised proposal; rounds repeat until confirmation; all feedback exchanges are stored on the meeting record | 3 |
+| FR-47 | After confirming a meeting that required feedback, the AI proposes an edit to that template's extraction instructions as a diff; admin approval creates a new template version, rejection discards it; instructions are never changed without approval | 3 |
 
 **Dashboard, reporting, roles**
 

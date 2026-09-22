@@ -132,11 +132,17 @@ runPipeline:
      round (max 5 questions, one batch), meeting.status = 'clarifying'
   4. else meeting.status = 'proposed' → proposal rows written
   → Realtime broadcast: client transitions live; polling fallback every 5 s
+revise (Server Action, human feedback, FR-46):
+  proposal screen feedback box → re-run extraction with feedback appended
+  → revised proposal; rounds stored on the meeting (extraction_feedback)
 confirm (Server Action, human, FR-23):
   one transaction: apply accepted items, origin badges, activity log,
   meeting.status = 'confirmed', record rejected items, freeze meeting record
 failure path: any error twice → status 'pending_processing' + retry button;
   the meeting record is already saved before the pipeline ever runs (FR-25)
+tune (post-confirm, FR-47): if the meeting had feedback rounds, a tuning call
+  proposes an edit to the template's extraction-instructions block; admin sees
+  a diff, approval inserts a new template version — never auto-applied
 ```
 
 Implementation rules:

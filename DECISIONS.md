@@ -75,6 +75,13 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 **Decision:** Swap the runtime driver to node-postgres (`pg`) with a small pool (max 5, 20 s idle timeout, 10 s connect timeout, TLS). Drizzle API unchanged; drizzle-kit migrations unaffected; seed script still uses postgres.js in a single-shot process where the bug does not manifest.
 **Consequence:** Boring, battle-tested driver in the request path; board renders went from minutes/hung to <1 s.
 
+## ADR-013 — Two-loop AI feedback: revise the proposal, then tune the instructions
+
+**Status:** accepted (owner design, 2026-09-22)
+**Context:** Extraction quality depends on team-specific phrasing the base prompts can't know. The owner wants the AI tunable through use, not through code changes.
+**Decision:** Two loops in the phase-3 pipeline. **Loop 1 (per meeting):** the proposal screen takes free-text feedback; the AI re-extracts with the feedback applied; rounds repeat until confirmation; exchanges are stored on the meeting. **Loop 2 (per template):** after confirming a meeting that needed feedback, a tuning call diffs the first proposal against the accepted result + feedback and proposes an edit to the template's extraction-instructions block, shown as a diff; admin approval writes a new template version. The AI never edits its own instructions unapproved — the FR-23 confirm-before-write principle extended to prompts themselves (FR-46/47).
+**Consequence:** The system converges on the team's language during the first weeks of use; instruction history is fully versioned and auditable; marginal cost is cents (each revision round is one extra Sonnet call).
+
 ## ADR-011 — Analytics: in-app SQL over activity log, no vendor
 
 **Status:** accepted (owner request, 2026-09-21)
