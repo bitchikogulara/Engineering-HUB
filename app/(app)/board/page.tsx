@@ -51,6 +51,8 @@ export default async function BoardPage({
     blockedReason: t.blockedReason,
     labels: t.labels,
     createdByType: t.createdByType,
+    originMeetingId: t.originMeetingId,
+    sourceQuote: t.sourceQuote,
     stale: isStale(t, now),
     overdue: isOverdue(t, now),
   }));

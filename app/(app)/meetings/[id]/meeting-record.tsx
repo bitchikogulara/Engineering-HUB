@@ -9,6 +9,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 /** Read-only view of a submitted meeting (immutable record, FR-18). */
 export function MeetingRecord({
+  appliedResult,
   templateName,
   date,
   sections,
@@ -25,6 +26,7 @@ export function MeetingRecord({
   answers: MeetingAnswers;
   freeText: string | null;
   status: string;
+  appliedResult?: Record<string, Record<string, unknown[]>> | null;
 }) {
   const nameOf = (id: string) =>
     participants.find((p) => p.id === id)?.name ?? "—";
@@ -48,6 +50,22 @@ export function MeetingRecord({
           {participants.map((p) => p.name.split(" ")[0]).join(", ")}
         </p>
       </header>
+
+      {appliedResult && (
+        <section className="rounded-lg border border-(--obj-achieved)/30 bg-(--obj-achieved-bg)/30 p-4">
+          <h2 className="mb-1 font-medium text-foreground text-sm">
+            Applied to the board
+          </h2>
+          <p className="text-muted-foreground text-xs">
+            {appliedResult.applied?.tasksNew?.length ?? 0} new task(s) ·{" "}
+            {appliedResult.applied?.tasksUpdate?.length ?? 0} update(s) ·{" "}
+            {appliedResult.applied?.objectives?.length ?? 0} objective(s) ·{" "}
+            {appliedResult.applied?.decisions?.length ?? 0} decision(s)
+            {Object.values(appliedResult.rejected ?? {}).flat().length > 0 &&
+              ` — ${Object.values(appliedResult.rejected ?? {}).flat().length} rejected`}
+          </p>
+        </section>
+      )}
 
       {sections.map((section) => (
         <section

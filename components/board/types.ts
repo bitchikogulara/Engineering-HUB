@@ -26,6 +26,8 @@ export type BoardTaskDto = {
   blockedReason: string | null;
   labels: string[];
   createdByType: string;
+  originMeetingId: string | null;
+  sourceQuote: string | null;
   stale: boolean;
   overdue: boolean;
 };

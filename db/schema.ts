@@ -178,6 +178,7 @@ export const task = pgTable(
     createdByType: text("created_by_type").notNull().default("user"), // user | ai (FR-32)
     createdById: text("created_by_id").notNull(),
     originMeetingId: uuid("origin_meeting_id").references(() => meeting.id),
+    sourceQuote: text("source_quote"), // the meeting sentence that produced this task (FR-20)
     doneAt: timestamp("done_at", { withTimezone: true }),
     lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
       .notNull()
@@ -284,6 +285,8 @@ export const meeting = pgTable(
     participants: text("participants").array().notNull().default([]), // user ids
     answers: jsonb("answers").notNull().default({}),
     freeText: text("free_text"), // "Additional notes" (FR-16)
+    extraction: jsonb("extraction"), // latest AI proposal (ai/schemas.ts shape)
+    appliedResult: jsonb("applied_result"), // what was applied vs rejected (FR-18)
     status: text("status").notNull().default("draft"), // draft|submitted|processed|confirmed|pending_processing
     summary: text("summary"),
     createdById: text("created_by_id")
@@ -298,6 +301,108 @@ export const meeting = pgTable(
       .defaultNow(),
   },
   (t) => [index("meeting_status_idx").on(t.status, t.date)],
+);
+
+// ---------------------------------------------------------------------------
+// AI pipeline (phase 3)
+// ---------------------------------------------------------------------------
+
+// Every Anthropic API call, with tokens and cost (FR-26).
+export const aiCall = pgTable(
+  "ai_call",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    meetingId: uuid("meeting_id").references(() => meeting.id, {
+      onDelete: "set null",
+    }),
+    purpose: text("purpose").notNull(), // extract | revise | clarify_rerun | tune
+    model: text("model").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costUsd: doublePrecision("cost_usd").notNull().default(0),
+    latencyMs: integer("latency_ms").notNull().default(0),
+    ok: boolean("ok").notNull().default(true),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("ai_call_meeting_idx").on(t.meetingId, t.createdAt)],
+);
+
+// Clarification exchange (FR-21): one row per round, questions + answers.
+export const clarificationRound = pgTable(
+  "clarification_round",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    meetingId: uuid("meeting_id")
+      .notNull()
+      .references(() => meeting.id, { onDelete: "cascade" }),
+    round: integer("round").notNull().default(1),
+    questions: jsonb("questions").notNull(), // [{id, question}]
+    answers: jsonb("answers"), // {questionId: answer | null (skipped)}
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("clarification_meeting_idx").on(t.meetingId, t.round)],
+);
+
+// Proposal feedback (FR-46): free-text critique that drives a re-extraction.
+export const feedbackRound = pgTable(
+  "feedback_round",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    meetingId: uuid("meeting_id")
+      .notNull()
+      .references(() => meeting.id, { onDelete: "cascade" }),
+    round: integer("round").notNull().default(1),
+    feedback: text("feedback").notNull(),
+    givenById: text("given_by_id")
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("feedback_meeting_idx").on(t.meetingId, t.round)],
+);
+
+// AI-proposed instruction edits, applied only on admin approval (FR-47).
+export const templateSuggestion = pgTable("template_suggestion", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id")
+    .notNull()
+    .references(() => meetingTemplate.id),
+  meetingId: uuid("meeting_id").references(() => meeting.id, {
+    onDelete: "set null",
+  }),
+  proposedInstructions: text("proposed_instructions").notNull(),
+  rationale: text("rationale").notNull(),
+  status: text("status").notNull().default("pending"), // pending | applied | discarded
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Decision log entries (FR-30; written by the pipeline from phase 3,
+// browsable UI arrives with phase 4).
+export const decision = pgTable(
+  "decision",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    text: text("text").notNull(),
+    context: text("context"),
+    meetingId: uuid("meeting_id").references(() => meeting.id),
+    date: date("date").notNull().defaultNow(),
+    createdByType: text("created_by_type").notNull().default("user"), // user | ai
+    createdById: text("created_by_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("decision_date_idx").on(t.date)],
 );
 
 // FR-41: a dismissed agenda suggestion is not re-suggested for 7 days.
@@ -351,6 +456,11 @@ export const schema = {
   meetingTemplate,
   meeting,
   suggestionDismissal,
+  aiCall,
+  clarificationRound,
+  feedbackRound,
+  templateSuggestion,
+  decision,
   taskType,
   task,
   taskComment,

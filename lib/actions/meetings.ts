@@ -3,7 +3,9 @@
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
+import { runExtractionPipeline } from "@/ai/pipeline";
 import { db } from "@/db";
 import {
   meeting,
@@ -116,6 +118,8 @@ export async function submitMeeting(input: unknown) {
       actorId: session.user.id,
     });
   });
+
+  after(() => runExtractionPipeline(data.id, "extract")); // async — submit returns immediately (FR-25)
 
   revalidatePath("/meetings");
   revalidatePath(`/meetings/${data.id}`);

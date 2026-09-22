@@ -13,7 +13,8 @@ export type ActivityEntry = {
     | "task_type"
     | "user"
     | "objective"
-    | "meeting";
+    | "meeting"
+    | "decision";
   entityId: string;
   action: string;
   actorType?: "user" | "ai";

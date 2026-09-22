@@ -11,6 +11,7 @@ const serverSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(), // required from phase 3
+  ANTHROPIC_WORKSPACE_ID: z.string().optional(), // for non-workspace-scoped keys
 });
 
 let cached: z.infer<typeof serverSchema> | undefined;

@@ -55,6 +55,8 @@ export async function getBoardTasks() {
       blockedReason: task.blockedReason,
       labels: task.labels,
       createdByType: task.createdByType,
+      originMeetingId: task.originMeetingId,
+      sourceQuote: task.sourceQuote,
       doneAt: task.doneAt,
       lastActivityAt: task.lastActivityAt,
       createdAt: task.createdAt,

@@ -181,6 +181,25 @@ export function TaskSheet({
           </button>
         </header>
 
+        {mode === "edit" && task?.originMeetingId && (
+          <div className="mx-4 mt-3 rounded-md border border-(--ai-ring)/40 bg-(--ai-origin-bg)/30 p-2.5">
+            <p className="text-[11px] text-(--ai-origin-fg)">
+              ✦ Created by AI from a meeting, confirmed by a human.{" "}
+              <a
+                href={`/meetings/${task.originMeetingId}`}
+                className="underline"
+              >
+                Open source meeting
+              </a>
+            </p>
+            {task.sourceQuote && (
+              <p className="mt-1 border-(--ai-origin) border-l-2 pl-2 text-muted-foreground text-xs italic">
+                "{task.sourceQuote}"
+              </p>
+            )}
+          </div>
+        )}
+
         <form onSubmit={handleSave} className="space-y-3 p-4">
           <fieldset disabled={!canEdit} className="space-y-3">
             <label className="block">
