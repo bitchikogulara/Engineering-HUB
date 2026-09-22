@@ -34,6 +34,12 @@ Next.js 16 (App Router, TS strict) · Supabase Postgres · Drizzle · Better Aut
 
 See `.env.example`. In production these live in Vercel project settings, never in the repo. `ANTHROPIC_API_KEY` is unused until phase 3.
 
+## Production configuration
+
+- **Vercel env vars:** `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `ANTHROPIC_API_KEY` (workspace-scoped), `CRON_SECRET` (must match the pg_cron job), and — for live board/forms — `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`. WhatsApp reminders additionally need `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID`.
+- **Scheduler:** a pg_cron job (`engineering-hub-tick`, every 5 min) posts to `/api/cron/tick` for meeting reminders and the 08:30 digest. Re-create it with a new secret if `CRON_SECRET` rotates.
+- **Backups:** weekly `pg_dump` via GitHub Actions (`backup.yml`, needs the `DATABASE_URL` repo secret); plus one-click JSON export at `/api/export` (admin).
+
 ## Deploy
 
 Vercel project connected to this GitHub repo; merges to `main` auto-deploy. Set all env vars in Vercel (with `BETTER_AUTH_URL` = the production URL) and run migrations against the production database via CI (see `.github/workflows/ci.yml`).
