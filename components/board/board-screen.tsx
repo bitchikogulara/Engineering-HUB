@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { moveTask } from "@/lib/actions/tasks";
+import { useRealtimeChannel } from "@/lib/realtime";
 import { positionBetween } from "@/lib/task-rules";
 import { BlockedReasonDialog } from "./blocked-reason-dialog";
 import { BoardCanvas } from "./board-canvas";
@@ -65,6 +66,11 @@ export function BoardScreen({
   // Server refresh (revalidatePath after any action) re-syncs local state.
   useEffect(() => setTasks(serverTasks), [serverTasks]);
 
+  // Live board (phase 5): peers broadcast "changed" after their writes.
+  const broadcast = useRealtimeChannel("board", {
+    onMessage: () => router.refresh(),
+  });
+
   // Filters + view live in the URL so views can be bookmarked (FR-10).
   const syncUrl = useCallback(
     (f: BoardFilters, v: View) => {
@@ -126,13 +132,14 @@ export function BoardScreen({
           position: move.position,
           blockedReason: blockedReason ?? null,
         });
+        broadcast("changed", { taskId: move.taskId });
         router.refresh();
       } catch {
         setTasks(serverTasks); // revert optimistic state on failure
         router.refresh();
       }
     },
-    [config.columns, router, serverTasks],
+    [config.columns, router, serverTasks, broadcast],
   );
 
   const requestMove = useCallback(
@@ -251,6 +258,7 @@ export function BoardScreen({
           canDelete={canDelete}
           onClose={() => {
             setSheet(null);
+            broadcast("changed", {});
             router.refresh();
           }}
         />

@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -25,6 +26,7 @@ export const user = pgTable("user", {
   // Engineering Hub roles: 'admin' | 'member' | 'viewer' (enforced in app code,
   // kept as text so the set can evolve without a migration)
   role: text("role").notNull().default("member"),
+  phone: text("phone"), // WhatsApp number for reminders (E.164), user-editable
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -233,6 +235,10 @@ export const objective = pgTable(
       .notNull()
       .references(() => user.id),
     state: text("state").notNull().default("planned"), // planned|active|achieved|missed|rolled
+    quarterlyPriorityId: uuid("quarterly_priority_id").references(
+      () => quarterlyPriority.id,
+      { onDelete: "set null" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -263,6 +269,10 @@ export const meetingTemplate = pgTable(
       .array()
       .notNull()
       .default([15]),
+    scheduleDow: integer("schedule_dow").array().notNull().default([]), // 1=Mon…7=Sun
+    scheduleTime: text("schedule_time"), // HH:MM, Asia/Tbilisi
+    monthlyLast: boolean("monthly_last").notNull().default(false), // last <dow> of month
+    scheduleEnabled: boolean("schedule_enabled").notNull().default(true),
     sections: jsonb("sections").notNull(), // TemplateSection[] (lib/schemas/meeting.ts)
     agendaRules: text("agenda_rules").array().notNull().default([]), // suggestion query keys
     extractionInstructions: text("extraction_instructions"), // appended to AI prompt (FR-42)
@@ -444,6 +454,77 @@ export const activityLog = pgTable(
   ],
 );
 
+// ---------------------------------------------------------------------------
+// Phase 4/5: quarterly priorities, notifications, summaries, reminder dedupe
+// ---------------------------------------------------------------------------
+
+// FR-9: quarterly priorities sit one level above weekly objectives.
+export const quarterlyPriority = pgTable("quarterly_priority", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  quarter: text("quarter").notNull(), // e.g. "2026-Q4"
+  rank: integer("rank").notNull().default(1),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// In-app notification feed (bell); WhatsApp mirrors it when configured.
+export const notification = pgTable(
+  "notification",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // mention | reminder | digest | proposal_ready
+    title: text("title").notNull(),
+    body: text("body"),
+    href: text("href"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("notification_user_idx").on(t.userId, t.readAt, t.createdAt)],
+);
+
+// FR-29: weekly summary — auto-drafted, editable, shareable via revocable token.
+export const weeklySummary = pgTable("weekly_summary", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  weekStart: date("week_start").notNull(),
+  content: text("content").notNull(), // markdown-ish plain text
+  shareToken: text("share_token").unique(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdById: text("created_by_id")
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Reminder dedupe: one reminder per (template, occurrence, kind).
+export const reminderSent = pgTable(
+  "reminder_sent",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    templateBaseId: uuid("template_base_id").notNull(),
+    occursAt: timestamp("occurs_at", { withTimezone: true }).notNull(),
+    kind: text("kind").notNull(), // before | digest
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("reminder_dedupe_idx").on(t.templateBaseId, t.occursAt, t.kind),
+  ],
+);
+
 export const schema = {
   user,
   session,
@@ -456,6 +537,10 @@ export const schema = {
   meetingTemplate,
   meeting,
   suggestionDismissal,
+  quarterlyPriority,
+  notification,
+  weeklySummary,
+  reminderSent,
   aiCall,
   clarificationRound,
   feedbackRound,

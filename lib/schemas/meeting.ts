@@ -57,4 +57,5 @@ export const objectiveSchema = z.object({
   weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   ownerId: z.string().min(1),
   state: z.enum(["planned", "active", "achieved", "missed", "rolled"]),
+  quarterlyPriorityId: z.string().uuid().nullable().optional(),
 });

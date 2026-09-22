@@ -1,6 +1,10 @@
+import { and, count, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
+import { NotificationBell } from "@/components/shell/notification-bell";
 import { SignOutButton } from "@/components/shell/sign-out-button";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { db } from "@/db";
+import { notification } from "@/db/schema";
 import { requireSession } from "@/lib/session";
 
 const NAV = [
@@ -8,7 +12,8 @@ const NAV = [
   { href: "/board", label: "Board" },
   { href: "/objectives", label: "Objectives" },
   { href: "/meetings", label: "Meetings" },
-  { href: "/decisions", label: "Decisions", phase: 4 },
+  { href: "/decisions", label: "Decisions" },
+  { href: "/analytics", label: "Analytics" },
   { href: "/archive", label: "Archive" },
 ] as const;
 
@@ -17,6 +22,10 @@ export default async function AppLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await requireSession();
   const { user } = session;
+  const [{ value: unread }] = await db
+    .select({ value: count() })
+    .from(notification)
+    .where(and(eq(notification.userId, user.id), isNull(notification.readAt)));
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -25,30 +34,20 @@ export default async function AppLayout({
           <span className="flex size-7 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground text-sm">
             E
           </span>
-          <span className="font-semibold text-foreground text-sm max-sm:hidden">
+          <span className="font-semibold text-foreground text-sm max-lg:hidden">
             Engineering Hub
           </span>
         </Link>
         <nav className="flex items-center gap-1 overflow-x-auto">
-          {NAV.map((item) =>
-            "phase" in item ? (
-              <span
-                key={item.href}
-                title={`Coming in phase ${item.phase}`}
-                className="cursor-default rounded-md px-3 py-1.5 text-muted-foreground/60 text-sm"
-              >
-                {item.label}
-              </span>
-            ) : (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-md px-3 py-1.5 text-foreground text-sm hover:bg-accent"
-              >
-                {item.label}
-              </Link>
-            ),
-          )}
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-md px-3 py-1.5 text-foreground text-sm hover:bg-accent"
+            >
+              {item.label}
+            </Link>
+          ))}
           {user.role === "admin" && (
             <Link
               href="/admin/users"
@@ -59,10 +58,15 @@ export default async function AppLayout({
           )}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <NotificationBell unread={unread} />
           <ThemeToggle />
-          <span className="text-muted-foreground text-xs max-sm:hidden">
-            {user.name} · <span className="capitalize">{user.role}</span>
-          </span>
+          <Link
+            href="/account"
+            className="text-muted-foreground text-xs hover:text-foreground max-sm:hidden"
+          >
+            {user.name.split(" ")[0]} ·{" "}
+            <span className="capitalize">{user.role}</span>
+          </Link>
           <SignOutButton />
         </div>
       </header>

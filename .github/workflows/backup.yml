@@ -1,0 +1,24 @@
+name: Weekly DB backup
+
+# FR-36: weekly automated dump, kept as a workflow artifact (90 days).
+on:
+  schedule:
+    - cron: "0 2 * * 1" # Mondays 02:00 UTC (06:00 Tbilisi)
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          sudo apt-get -y install postgresql-client >/dev/null
+          pg_dump "$DATABASE_URL" --no-owner --no-privileges -F c \
+            -f "backup-$(date +%F).dump"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup-*.dump
+          retention-days: 90

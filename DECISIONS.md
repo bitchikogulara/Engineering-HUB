@@ -82,6 +82,13 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 **Decision:** Two loops in the phase-3 pipeline. **Loop 1 (per meeting):** the proposal screen takes free-text feedback; the AI re-extracts with the feedback applied; rounds repeat until confirmation; exchanges are stored on the meeting. **Loop 2 (per template):** after confirming a meeting that needed feedback, a tuning call diffs the first proposal against the accepted result + feedback and proposes an edit to the template's extraction-instructions block, shown as a diff; admin approval writes a new template version. The AI never edits its own instructions unapproved — the FR-23 confirm-before-write principle extended to prompts themselves (FR-46/47).
 **Consequence:** The system converges on the team's language during the first weeks of use; instruction history is fully versioned and auditable; marginal cost is cents (each revision round is one extra Sonnet call).
 
+## ADR-014 — UI strings stay inline for v1; Georgian i18n deferred
+
+**Status:** accepted (conscious deviation from FR-37, 2026-09-22)
+**Context:** FR-37 wants all UI strings in one messages file so Georgian can be added. Extracting every string across ~40 components now would be a large, error-prone refactor with zero user-visible benefit until a Georgian translation actually exists — and the team works in English-first UI today. The half of FR-37 that matters operationally (AI handles mixed Georgian/English meeting notes, with test fixtures) is implemented and verified.
+**Decision:** Strings remain inline for v1. When Georgian is requested, do the extraction in one dedicated pass (mechanical, AI-assisted) into `/messages/{en,ka}.json` with next-intl.
+**Consequence:** FR-37's file-structure clause is deferred tech debt, logged here rather than silently skipped.
+
 ## ADR-011 — Analytics: in-app SQL over activity log, no vendor
 
 **Status:** accepted (owner request, 2026-09-21)

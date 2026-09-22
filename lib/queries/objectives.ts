@@ -17,6 +17,7 @@ export async function getObjectives(opts: { activeOnly?: boolean } = {}) {
       state: objective.state,
       ownerId: objective.ownerId,
       ownerName: user.name,
+      quarterlyPriorityId: objective.quarterlyPriorityId,
       total: sql<number>`count(${task.id})::int`,
       done: sql<number>`count(${task.doneAt})::int`,
     })

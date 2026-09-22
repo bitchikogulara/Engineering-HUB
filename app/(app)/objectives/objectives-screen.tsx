@@ -7,6 +7,10 @@ import {
   deleteObjective,
   updateObjective,
 } from "@/lib/actions/objectives";
+import {
+  createQuarterlyPriority,
+  deleteQuarterlyPriority,
+} from "@/lib/actions/quarterly";
 
 const inputCls =
   "rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring";
@@ -27,9 +31,12 @@ type ObjectiveDto = {
   state: string;
   ownerId: string;
   ownerName: string;
+  quarterlyPriorityId: string | null;
   done: number;
   total: number;
 };
+
+type PriorityDto = { id: string; title: string; rank: number };
 
 function mondayOfThisWeek(): string {
   const d = new Date();
@@ -41,12 +48,17 @@ function mondayOfThisWeek(): string {
 export function ObjectivesScreen({
   objectives,
   members,
+  quarter,
+  priorities,
   canEdit,
 }: {
   objectives: ObjectiveDto[];
   members: { id: string; name: string }[];
+  quarter: string;
+  priorities: PriorityDto[];
   canEdit: boolean;
 }) {
+  const [newPriority, setNewPriority] = useState("");
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [weekStart, setWeekStart] = useState(mondayOfThisWeek());
@@ -78,6 +90,72 @@ export function ObjectivesScreen({
           {error}
         </p>
       )}
+
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h2 className="mb-2 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+          Quarterly priorities · {quarter}
+        </h2>
+        {priorities.length === 0 ? (
+          <p className="text-muted-foreground text-xs">
+            None yet — quarterly planning sets them.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {priorities.map((p) => (
+              <li key={p.id} className="flex items-center gap-2 text-sm">
+                <span className="font-mono text-muted-foreground text-xs">
+                  #{p.rank}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-card-foreground">
+                  {p.title}
+                </span>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Delete priority "${p.title}"?`))
+                        void run(() => deleteQuarterlyPriority({ id: p.id }));
+                    }}
+                    className="rounded-md border border-border px-2 py-0.5 text-muted-foreground text-xs hover:bg-accent hover:text-destructive"
+                  >
+                    ✕
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {canEdit && (
+          <form
+            className="mt-3 flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newPriority.trim()) return;
+              void run(() =>
+                createQuarterlyPriority({
+                  title: newPriority.trim(),
+                  quarter,
+                  rank: priorities.length + 1,
+                }),
+              );
+              setNewPriority("");
+            }}
+          >
+            <input
+              value={newPriority}
+              onChange={(e) => setNewPriority(e.target.value)}
+              placeholder="New quarterly priority"
+              className={`${inputCls} flex-1`}
+            />
+            <button
+              type="submit"
+              className="rounded-md border border-border px-3 text-sm hover:bg-accent"
+            >
+              Add
+            </button>
+          </form>
+        )}
+      </section>
 
       {canEdit && (
         <form
@@ -174,6 +252,28 @@ export function ObjectivesScreen({
                 </span>
                 {canEdit && (
                   <>
+                    {priorities.length > 0 && (
+                      <select
+                        value={o.quarterlyPriorityId ?? ""}
+                        onChange={(e) =>
+                          void run(() =>
+                            updateObjective({
+                              id: o.id,
+                              quarterlyPriorityId: e.target.value || null,
+                            }),
+                          )
+                        }
+                        className={`${inputCls} max-w-36 py-1 text-xs`}
+                        aria-label="Quarterly priority"
+                      >
+                        <option value="">No quarter link</option>
+                        {priorities.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            #{p.rank} {p.title}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                     <select
                       value={o.state}
                       onChange={(e) =>

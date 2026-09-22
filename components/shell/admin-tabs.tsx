@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-export function AdminTabs({ active }: { active: "users" | "board" }) {
+export function AdminTabs({
+  active,
+}: {
+  active: "users" | "board" | "templates";
+}) {
   const cls = (isActive: boolean) =>
     `rounded-md px-3 py-1.5 text-sm ${
       isActive
@@ -14,6 +18,9 @@ export function AdminTabs({ active }: { active: "users" | "board" }) {
       </Link>
       <Link href="/admin/board" className={cls(active === "board")}>
         Board setup
+      </Link>
+      <Link href="/admin/templates" className={cls(active === "templates")}>
+        Templates
       </Link>
     </nav>
   );

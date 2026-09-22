@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { boardColumn, task, taskComment, taskType, user } from "@/db/schema";
 import { diffOf, logActivity } from "@/lib/activity";
+import { notifyUsers } from "@/lib/notifications";
 import {
   commentSchema,
   createTaskSchema,
@@ -252,6 +253,20 @@ export async function addComment(input: unknown) {
       actorId: session.user.id,
     });
   });
+
+  const [commented] = await db
+    .select({ displayNumber: task.displayNumber })
+    .from(task)
+    .where(eq(task.id, data.taskId));
+  await notifyUsers(
+    mentions.filter((id) => id !== session.user.id),
+    {
+      kind: "mention",
+      title: `${session.user.name.split(" ")[0]} mentioned you on EH-${commented?.displayNumber}`,
+      body: data.body.slice(0, 140),
+      href: "/board",
+    },
+  );
 
   revalidateBoard();
 }

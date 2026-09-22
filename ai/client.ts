@@ -52,7 +52,7 @@ export function loadPrompt(name: string): { text: string; version: string } {
 }
 
 export async function callStructured(opts: {
-  purpose: "extract" | "revise" | "clarify_rerun" | "tune";
+  purpose: "extract" | "revise" | "clarify_rerun" | "tune" | "summary";
   meetingId: string | null;
   promptVersion: string;
   system: string;

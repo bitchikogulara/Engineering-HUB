@@ -12,6 +12,10 @@ const serverSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(), // required from phase 3
   ANTHROPIC_WORKSPACE_ID: z.string().optional(), // for non-workspace-scoped keys
+  CRON_SECRET: z.string().optional(), // bearer for /api/cron/tick
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(), // Meta Business Cloud API
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  APP_URL: z.string().url().optional(), // public URL for deep links (falls back to BETTER_AUTH_URL)
 });
 
 let cached: z.infer<typeof serverSchema> | undefined;

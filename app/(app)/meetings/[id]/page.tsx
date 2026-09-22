@@ -95,7 +95,12 @@ export default async function MeetingPage({
       getAgendaSuggestions(template.agendaRules),
     ]);
     return (
-      <MeetingForm {...shared} context={context} suggestions={suggestions} />
+      <MeetingForm
+        {...shared}
+        context={context}
+        suggestions={suggestions}
+        currentUser={{ id: session.user.id, name: session.user.name }}
+      />
     );
   }
 

@@ -18,6 +18,13 @@ export const metadata: Metadata = {
   title: { default: "Engineering Hub", template: "%s — Engineering Hub" },
   description:
     "Task board, weekly objectives and AI meeting assistant for the engineering department.",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon.svg" },
+  appleWebApp: {
+    capable: true,
+    title: "EngHub",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
@@ -29,7 +36,7 @@ export const viewport: Viewport = {
 
 /** Sets [data-theme] before first paint; dark is the default (design decision). */
 function ThemeScript() {
-  const code = `try{var t=localStorage.getItem("eh-theme");document.documentElement.dataset.theme=t==="light"?"light":"dark"}catch(e){document.documentElement.dataset.theme="dark"}`;
+  const code = `try{var t=localStorage.getItem("eh-theme");document.documentElement.dataset.theme=t==="light"?"light":"dark"}catch(e){document.documentElement.dataset.theme="dark"};if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`;
   // biome-ignore lint/security/noDangerouslySetInnerHtml: static theme bootstrap, no user input
   return <script dangerouslySetInnerHTML={{ __html: code }} />;
 }

@@ -9,6 +9,7 @@ import {
   templateSuggestion,
   user,
 } from "@/db/schema";
+import { notifyUsers } from "@/lib/notifications";
 import { sectionsSchema } from "@/lib/schemas/meeting";
 import { callStructured, loadPrompt } from "./client";
 import { buildBoardSnapshot, renderMeetingRecord } from "./context";
@@ -152,6 +153,12 @@ export async function runExtractionPipeline(
           updatedAt: new Date(),
         })
         .where(eq(meeting.id, meetingId));
+      await notifyUsers(m.participants, {
+        kind: "proposal_ready",
+        title: `${template.name}: proposal ready for review`,
+        body: `${extraction.tasks_new.length} new · ${extraction.tasks_update.length} updates · ${extraction.decisions.length} decisions`,
+        href: `/meetings/${meetingId}`,
+      });
     }
   } catch (err) {
     console.error("extraction pipeline failed", err);

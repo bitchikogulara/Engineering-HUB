@@ -9,6 +9,7 @@ import {
   submitMeeting,
 } from "@/lib/actions/meetings";
 import type { ContextCard } from "@/lib/queries/meetings";
+import { useRealtimeChannel } from "@/lib/realtime";
 import type { MeetingAnswers, TemplateSection } from "@/lib/schemas/meeting";
 
 const inputCls =
@@ -26,6 +27,7 @@ export function MeetingForm({
   freeText: initialFreeText,
   context,
   suggestions: initialSuggestions,
+  currentUser,
 }: {
   meetingId: string;
   templateName: string;
@@ -36,6 +38,7 @@ export function MeetingForm({
   freeText: string | null;
   context: Record<string, Record<string, ContextCard[]>>;
   suggestions: Suggestion[];
+  currentUser: { id: string; name: string };
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<MeetingAnswers>(initialAnswers);
@@ -49,6 +52,41 @@ export function MeetingForm({
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef({ answers, freeText });
   latest.current = { answers, freeText };
+  const focusedField = useRef<string | null>(null);
+  const [others, setOthers] = useState<string[]>([]);
+
+  // Field-level live co-editing (ADR-007): last write wins per field; the
+  // field you are typing in is never overwritten by a peer.
+  const broadcast = useRealtimeChannel(`meeting:${meetingId}`, {
+    presence: { key: currentUser.id, name: currentUser.name },
+    onPresence: (names) =>
+      setOthers(names.filter((n) => n !== currentUser.name)),
+    onMessage: (event, payload) => {
+      if (event === "patch") {
+        const p = payload as {
+          sectionId: string;
+          personKey: string;
+          questionId: string;
+          value: string;
+        };
+        const key = `${p.sectionId}:${p.personKey}:${p.questionId}`;
+        if (focusedField.current === key) return;
+        setAnswers((prev) => ({
+          ...prev,
+          [p.sectionId]: {
+            ...prev[p.sectionId],
+            [p.personKey]: {
+              ...prev[p.sectionId]?.[p.personKey],
+              [p.questionId]: p.value,
+            },
+          },
+        }));
+      } else if (event === "freeText") {
+        if (focusedField.current === "freeText") return;
+        setFreeText((payload as { value: string }).value);
+      }
+    },
+  });
 
   // Autosave ≤5 s after the last keystroke (FR-15); DB is the durability layer.
   const scheduleSave = useCallback(() => {
@@ -91,6 +129,7 @@ export function MeetingForm({
         },
       },
     }));
+    broadcast("patch", { sectionId, personKey, questionId, value });
     scheduleSave();
   }
 
@@ -135,6 +174,11 @@ export function MeetingForm({
             {participants.map((p) => p.name.split(" ")[0]).join(", ")}
           </p>
         </div>
+        {others.length > 0 && (
+          <span className="rounded-full bg-(--obj-active-bg) px-2 py-0.5 text-(--obj-active-fg) text-xs">
+            ● {others.join(", ")} here
+          </span>
+        )}
         <span
           className={`font-mono text-xs ${
             saveState === "saved"
@@ -256,6 +300,12 @@ export function MeetingForm({
                               e.target.value,
                             )
                           }
+                          onFocus={() => {
+                            focusedField.current = `${section.id}:${person.id}:${q.id}`;
+                          }}
+                          onBlur={() => {
+                            focusedField.current = null;
+                          }}
                           placeholder={q.placeholder}
                           className={inputCls}
                         />
@@ -270,6 +320,12 @@ export function MeetingForm({
                               e.target.value,
                             )
                           }
+                          onFocus={() => {
+                            focusedField.current = `${section.id}:${person.id}:${q.id}`;
+                          }}
+                          onBlur={() => {
+                            focusedField.current = null;
+                          }}
                           placeholder={q.placeholder}
                           rows={3}
                           className={inputCls}
@@ -296,7 +352,14 @@ export function MeetingForm({
           value={freeText}
           onChange={(e) => {
             setFreeText(e.target.value);
+            broadcast("freeText", { value: e.target.value });
             scheduleSave();
+          }}
+          onFocus={() => {
+            focusedField.current = "freeText";
+          }}
+          onBlur={() => {
+            focusedField.current = null;
           }}
           rows={5}
           className={inputCls}
