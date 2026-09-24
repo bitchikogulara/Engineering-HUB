@@ -42,11 +42,25 @@ export const answersSchema = z.record(
 );
 export type MeetingAnswers = z.infer<typeof answersSchema>;
 
+// Live co-editing (ADR-007): autosave sends only the fields that changed,
+// and the server merges them — a full-object write would let two people
+// editing at once overwrite each other's answers.
+export const fieldPatchSchema = z.object({
+  sectionId: z.string().min(1).max(100),
+  personKey: z.string().min(1).max(100),
+  questionId: z.string().min(1).max(100),
+  value: z.string().max(20_000),
+});
+export type FieldPatch = z.infer<typeof fieldPatchSchema>;
+
 export const saveMeetingSchema = z.object({
   id: z.string().uuid(),
-  answers: answersSchema,
-  freeText: z.string().max(50_000).nullable().optional(),
+  patches: z.array(fieldPatchSchema).max(500),
+  // undefined = untouched this save; "" clears it
+  freeText: z.string().max(50_000).optional(),
 });
+
+export const submitMeetingSchema = z.object({ id: z.string().uuid() });
 
 export const startMeetingSchema = z.object({
   templateBaseId: z.string().uuid(),

@@ -99,7 +99,11 @@ export default async function MeetingPage({
         {...shared}
         context={context}
         suggestions={suggestions}
-        currentUser={{ id: session.user.id, name: session.user.name }}
+        currentUser={{
+          id: session.user.id,
+          name: session.user.name,
+          role: session.user.role,
+        }}
       />
     );
   }

@@ -14,7 +14,14 @@ import {
   user,
 } from "@/db/schema";
 import { logActivity } from "@/lib/activity";
-import { saveMeetingSchema, startMeetingSchema } from "@/lib/schemas/meeting";
+import { mergeAnswerPatches } from "@/lib/meeting-merge";
+import {
+  type MeetingAnswers,
+  saveMeetingSchema,
+  sectionsSchema,
+  startMeetingSchema,
+  submitMeetingSchema,
+} from "@/lib/schemas/meeting";
 import { requirePermission } from "@/lib/session";
 
 /** Creates a draft meeting from the active version of a template. */
@@ -63,34 +70,93 @@ export async function startMeeting(input: unknown) {
   redirect(`/meetings/${created.id}`);
 }
 
-/** Autosave (FR-15): drafts persist to the DB, never localStorage. */
+/** Autosave (FR-15): drafts persist to the DB, never localStorage.
+ *  Field-level merge under a row lock (ADR-007): concurrent editors each
+ *  write only their own patches, so simultaneous saves never clobber each
+ *  other. Per-person sections accept patches only from that person (or an
+ *  admin, so someone absent can still be filled in for). */
 export async function saveMeeting(input: unknown) {
-  await requirePermission("meeting.participate");
+  const session = await requirePermission("meeting.participate");
   const data = saveMeetingSchema.parse(input);
-  const [existing] = await db
-    .select({ status: meeting.status })
-    .from(meeting)
-    .where(eq(meeting.id, data.id));
-  if (!existing) throw new Error("Meeting not found");
-  if (existing.status !== "draft") {
-    throw new Error("This meeting is already submitted.");
-  }
-  await db
-    .update(meeting)
-    .set({
-      answers: data.answers,
-      freeText: data.freeText ?? null,
-      updatedAt: new Date(),
+  const isAdmin = session.user.role === "admin";
+
+  const applied = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        status: meeting.status,
+        answers: meeting.answers,
+        templateId: meeting.templateId,
+      })
+      .from(meeting)
+      .where(eq(meeting.id, data.id))
+      .for("update");
+    if (!row) throw new Error("Meeting not found");
+    if (row.status !== "draft") {
+      throw new Error("This meeting is already submitted.");
+    }
+
+    const [tpl] = await tx
+      .select({ sections: meetingTemplate.sections })
+      .from(meetingTemplate)
+      .where(eq(meetingTemplate.id, row.templateId));
+    const perPersonBySection = new Map(
+      sectionsSchema.parse(tpl.sections).map((s) => [s.id, s.perPerson]),
+    );
+
+    const { answers, applied: appliedCount } = mergeAnswerPatches(
+      (row.answers ?? {}) as MeetingAnswers,
+      data.patches,
+      { userId: session.user.id, isAdmin, perPersonBySection },
+    );
+
+    if (appliedCount > 0 || data.freeText !== undefined) {
+      await tx
+        .update(meeting)
+        .set({
+          answers,
+          ...(data.freeText !== undefined
+            ? { freeText: data.freeText || null }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(meeting.id, data.id));
+    }
+    return appliedCount;
+  });
+
+  return { savedAt: new Date().toISOString(), applied };
+}
+
+/** Reconcile poll for the live form: current answers + status, so co-editing
+ *  works (a few seconds behind) even when the realtime channel is off, and
+ *  everyone's screen advances when one person submits. */
+export async function getMeetingLiveState(input: unknown) {
+  await requirePermission("meeting.readRaw");
+  const { id } = submitMeetingSchema.parse(input);
+  const [row] = await db
+    .select({
+      status: meeting.status,
+      answers: meeting.answers,
+      freeText: meeting.freeText,
     })
-    .where(eq(meeting.id, data.id));
-  return { savedAt: new Date().toISOString() };
+    .from(meeting)
+    .where(eq(meeting.id, id));
+  if (!row) throw new Error("Meeting not found");
+  return {
+    status: row.status,
+    answers: (row.answers ?? {}) as MeetingAnswers,
+    freeText: row.freeText,
+  };
 }
 
 /** Submit (FR-17). Phase 2: the record is saved and browsable; the AI
  *  pipeline takes over from here in phase 3. */
 export async function submitMeeting(input: unknown) {
   const session = await requirePermission("meeting.submit");
-  const data = saveMeetingSchema.parse(input);
+  // The client flushes its pending patches via saveMeeting first; submit
+  // freezes what the server holds — sending a full snapshot here would let
+  // one person's stale copy erase a co-editor's answers.
+  const data = submitMeetingSchema.parse(input);
   const [existing] = await db
     .select({ status: meeting.status })
     .from(meeting)
@@ -104,8 +170,6 @@ export async function submitMeeting(input: unknown) {
     await tx
       .update(meeting)
       .set({
-        answers: data.answers,
-        freeText: data.freeText ?? null,
         status: "submitted",
         submittedAt: new Date(),
         updatedAt: new Date(),

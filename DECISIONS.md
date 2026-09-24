@@ -89,6 +89,13 @@ Format: lightweight ADRs, newest last. Status: `accepted` | `pending owner appro
 **Decision:** Strings remain inline for v1. When Georgian is requested, do the extraction in one dedicated pass (mechanical, AI-assisted) into `/messages/{en,ka}.json` with next-intl.
 **Consequence:** FR-37's file-structure clause is deferred tech debt, logged here rather than silently skipped.
 
+## ADR-015 — Meeting co-editing: server-merged field patches + poll fallback
+
+**Status:** accepted · 2026-09-24 (first week of real use)
+**Context:** ADR-007's broadcast-only sync proved fragile in practice: autosave wrote the whole answers object, so two people editing at once silently overwrote each other's saves, and with the realtime keys unset the form wasn't live at all — the second person had to refresh.
+**Decision:** Three changes. (1) Autosave sends only the fields the client changed; the server merges them into the stored answers under a row lock, so concurrent saves can never clobber each other, and submit freezes the server's copy rather than a client snapshot. (2) Ownership is enforced end to end: per-person section fields are editable only by that person (admins may fill in for someone absent) — disabled in the UI and dropped server-side (`lib/meeting-merge.ts`, unit-tested). (3) A 4-second reconcile poll (`getMeetingLiveState`) merges server state into fields that are not focused, unsaved, or edited in the last 8 s — so co-editing is live even without the realtime channel, missed broadcasts self-heal, and everyone's screen advances when one person submits. Supabase broadcast remains the instant, keystroke-level layer on top.
+**Consequence:** The realtime env keys are now an enhancement, not a requirement; worst-case sync latency without them is ~6 s (2 s debounce + 4 s poll).
+
 ## ADR-011 — Analytics: in-app SQL over activity log, no vendor
 
 **Status:** accepted (owner request, 2026-09-21)

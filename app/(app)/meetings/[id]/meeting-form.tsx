@@ -5,12 +5,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   deleteDraftMeeting,
   dismissSuggestion,
+  getMeetingLiveState,
   saveMeeting,
   submitMeeting,
 } from "@/lib/actions/meetings";
 import type { ContextCard } from "@/lib/queries/meetings";
 import { useRealtimeChannel } from "@/lib/realtime";
-import type { MeetingAnswers, TemplateSection } from "@/lib/schemas/meeting";
+import type {
+  FieldPatch,
+  MeetingAnswers,
+  TemplateSection,
+} from "@/lib/schemas/meeting";
+
+// A locally edited field is shielded from poll merges for this long, so an
+// in-flight stale read can never roll back what was just typed.
+const EDIT_SHIELD_MS = 8_000;
 
 const inputCls =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring";
@@ -38,7 +47,7 @@ export function MeetingForm({
   freeText: string | null;
   context: Record<string, Record<string, ContextCard[]>>;
   suggestions: Suggestion[];
-  currentUser: { id: string; name: string };
+  currentUser: { id: string; name: string; role: string };
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<MeetingAnswers>(initialAnswers);
@@ -54,6 +63,17 @@ export function MeetingForm({
   latest.current = { answers, freeText };
   const focusedField = useRef<string | null>(null);
   const [others, setOthers] = useState<string[]>([]);
+  // Unsaved field patches (keyed section:person:question) + when each field
+  // was last touched locally — both guard the reconcile poll.
+  const pending = useRef(new Map<string, FieldPatch>());
+  const freeTextDirty = useRef(false);
+  const editedAt = useRef(new Map<string, number>());
+
+  // Everyone fills their own per-person block; admins can fill in for
+  // someone who is absent.
+  const canEditAll = currentUser.role === "admin";
+  const canEdit = (section: TemplateSection, personId: string) =>
+    !section.perPerson || personId === currentUser.id || canEditAll;
 
   // Field-level live co-editing (ADR-007): last write wins per field; the
   // field you are typing in is never overwritten by a peer.
@@ -84,34 +104,105 @@ export function MeetingForm({
       } else if (event === "freeText") {
         if (focusedField.current === "freeText") return;
         setFreeText((payload as { value: string }).value);
+      } else if (event === "submitted") {
+        router.refresh();
       }
     },
   });
 
-  // Autosave ≤5 s after the last keystroke (FR-15); DB is the durability layer.
+  // Autosave ≤5 s after the last keystroke (FR-15); DB is the durability
+  // layer. Only the fields this client actually changed are sent — the
+  // server merges them, so simultaneous editors never overwrite each other.
+  const flushSave = useCallback(async () => {
+    const sent = [...pending.current.entries()];
+    const ftSent = freeTextDirty.current ? latest.current.freeText : undefined;
+    if (sent.length === 0 && ftSent === undefined) return;
+    setSaveState("saving");
+    await saveMeeting({
+      id: meetingId,
+      patches: sent.map(([, p]) => p),
+      freeText: ftSent,
+    });
+    // Drop only patches that weren't superseded while the save was in flight.
+    for (const [key, p] of sent) {
+      if (pending.current.get(key) === p) pending.current.delete(key);
+    }
+    if (ftSent !== undefined && latest.current.freeText === ftSent) {
+      freeTextDirty.current = false;
+    }
+    setSaveState(
+      pending.current.size > 0 || freeTextDirty.current ? "dirty" : "saved",
+    );
+  }, [meetingId]);
+
   const scheduleSave = useCallback(() => {
     setSaveState("dirty");
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      setSaveState("saving");
-      try {
-        await saveMeeting({
-          id: meetingId,
-          answers: latest.current.answers,
-          freeText: latest.current.freeText || null,
-        });
-        setSaveState("saved");
-      } catch {
+    saveTimer.current = setTimeout(() => {
+      flushSave().catch(() => {
         setSaveState("dirty"); // retry on next change; nothing is lost locally
-      }
+      });
     }, 2000);
-  }, [meetingId]);
+  }, [flushSave]);
 
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, []);
+
+  // Reconcile poll: co-editing stays live (a few seconds behind) even when
+  // the realtime channel is off or a broadcast was missed, and the screen
+  // advances for everyone once one person submits. Fields focused, unsaved,
+  // or edited in the last few seconds are never touched by a merge.
+  useEffect(() => {
+    let stopped = false;
+    const timer = setInterval(async () => {
+      try {
+        const state = await getMeetingLiveState({ id: meetingId });
+        if (stopped) return;
+        if (state.status !== "draft") {
+          router.refresh();
+          return;
+        }
+        const cutoff = Date.now() - EDIT_SHIELD_MS;
+        const mergeable = (key: string) =>
+          focusedField.current !== key &&
+          !pending.current.has(key) &&
+          (editedAt.current.get(key) ?? 0) < cutoff;
+        setAnswers((prev) => {
+          let next = prev;
+          for (const [sid, people] of Object.entries(state.answers)) {
+            for (const [pid, fields] of Object.entries(people)) {
+              for (const [qid, value] of Object.entries(fields)) {
+                const key = `${sid}:${pid}:${qid}`;
+                if ((next[sid]?.[pid]?.[qid] ?? "") === value) continue;
+                if (!mergeable(key)) continue;
+                next = {
+                  ...next,
+                  [sid]: {
+                    ...next[sid],
+                    [pid]: { ...next[sid]?.[pid], [qid]: value },
+                  },
+                };
+              }
+            }
+          }
+          return next;
+        });
+        if (!freeTextDirty.current && mergeable("freeText")) {
+          const value = state.freeText ?? "";
+          setFreeText((cur) => (cur === value ? cur : value));
+        }
+      } catch {
+        // transient — next tick retries
+      }
+    }, 4000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [meetingId, router]);
 
   function setAnswer(
     sectionId: string,
@@ -129,8 +220,16 @@ export function MeetingForm({
         },
       },
     }));
+    const key = `${sectionId}:${personKey}:${questionId}`;
+    pending.current.set(key, { sectionId, personKey, questionId, value });
+    editedAt.current.set(key, Date.now());
     broadcast("patch", { sectionId, personKey, questionId, value });
     scheduleSave();
+  }
+
+  function markFreeTextEdited() {
+    freeTextDirty.current = true;
+    editedAt.current.set("freeText", Date.now());
   }
 
   function insertSuggestion(s: Suggestion) {
@@ -138,6 +237,7 @@ export function MeetingForm({
       prev ? `${prev}\n- [${s.source}] ${s.text}` : `- [${s.source}] ${s.text}`,
     );
     setSuggestions((prev) => prev.filter((x) => x.key !== s.key));
+    markFreeTextEdited();
     scheduleSave();
   }
 
@@ -150,11 +250,10 @@ export function MeetingForm({
     setSubmitting(true);
     setError(null);
     try {
-      await submitMeeting({
-        id: meetingId,
-        answers: latest.current.answers,
-        freeText: latest.current.freeText || null,
-      });
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      await flushSave(); // everything typed here lands before the freeze
+      await submitMeeting({ id: meetingId });
+      broadcast("submitted", {});
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Submit failed");
@@ -245,97 +344,112 @@ export function MeetingForm({
           )}
 
           {(section.perPerson ? participants : [{ id: "_", name: "" }]).map(
-            (person) => (
-              <div
-                key={person.id}
-                className={
-                  section.perPerson
-                    ? "mt-3 rounded-md border border-border bg-surface-2 p-3"
-                    : "mt-3"
-                }
-              >
-                {section.perPerson && (
-                  <p className="mb-2 font-medium text-foreground text-xs">
-                    {person.name}
-                  </p>
-                )}
-
-                {context[section.id]?.[person.id]?.length ? (
-                  <div className="mb-2 rounded-md border border-(--obj-active)/30 bg-(--obj-active-bg)/40 p-2">
-                    <p className="mb-1 text-[11px] text-muted-foreground">
-                      From the board — confirm or adjust:
-                    </p>
-                    <ul className="space-y-0.5">
-                      {context[section.id][person.id].map((c) => (
-                        <li key={c.id} className="text-foreground text-xs">
-                          <span className="font-mono text-muted-foreground">
-                            EH-{c.displayNumber}
-                          </span>{" "}
-                          {c.title}{" "}
-                          <span className="text-muted-foreground">
-                            · {c.columnName}
-                            {c.blockedReason ? ` — ${c.blockedReason}` : ""}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                <div className="space-y-2.5">
-                  {section.questions.map((q) => (
-                    // biome-ignore lint/a11y/noLabelWithoutControl: the input/textarea is a conditional child of this label
-                    <label key={q.id} className="block">
-                      <span className="mb-1 block text-muted-foreground text-xs">
-                        {q.label}
-                      </span>
-                      {q.kind === "short" ? (
-                        <input
-                          value={answers[section.id]?.[person.id]?.[q.id] ?? ""}
-                          onChange={(e) =>
-                            setAnswer(
-                              section.id,
-                              person.id,
-                              q.id,
-                              e.target.value,
-                            )
-                          }
-                          onFocus={() => {
-                            focusedField.current = `${section.id}:${person.id}:${q.id}`;
-                          }}
-                          onBlur={() => {
-                            focusedField.current = null;
-                          }}
-                          placeholder={q.placeholder}
-                          className={inputCls}
-                        />
-                      ) : (
-                        <textarea
-                          value={answers[section.id]?.[person.id]?.[q.id] ?? ""}
-                          onChange={(e) =>
-                            setAnswer(
-                              section.id,
-                              person.id,
-                              q.id,
-                              e.target.value,
-                            )
-                          }
-                          onFocus={() => {
-                            focusedField.current = `${section.id}:${person.id}:${q.id}`;
-                          }}
-                          onBlur={() => {
-                            focusedField.current = null;
-                          }}
-                          placeholder={q.placeholder}
-                          rows={3}
-                          className={inputCls}
-                        />
+            (person) => {
+              const editable = canEdit(section, person.id);
+              return (
+                <div
+                  key={person.id}
+                  className={
+                    section.perPerson
+                      ? "mt-3 rounded-md border border-border bg-surface-2 p-3"
+                      : "mt-3"
+                  }
+                >
+                  {section.perPerson && (
+                    <p className="mb-2 flex items-baseline gap-2 font-medium text-foreground text-xs">
+                      {person.name}
+                      {!editable && (
+                        <span className="font-normal text-[11px] text-muted-foreground">
+                          {person.name.split(" ")[0]} fills this in — updates
+                          live
+                        </span>
                       )}
-                    </label>
-                  ))}
+                    </p>
+                  )}
+
+                  {context[section.id]?.[person.id]?.length ? (
+                    <div className="mb-2 rounded-md border border-(--obj-active)/30 bg-(--obj-active-bg)/40 p-2">
+                      <p className="mb-1 text-[11px] text-muted-foreground">
+                        From the board — confirm or adjust:
+                      </p>
+                      <ul className="space-y-0.5">
+                        {context[section.id][person.id].map((c) => (
+                          <li key={c.id} className="text-foreground text-xs">
+                            <span className="font-mono text-muted-foreground">
+                              EH-{c.displayNumber}
+                            </span>{" "}
+                            {c.title}{" "}
+                            <span className="text-muted-foreground">
+                              · {c.columnName}
+                              {c.blockedReason ? ` — ${c.blockedReason}` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-2.5">
+                    {section.questions.map((q) => (
+                      // biome-ignore lint/a11y/noLabelWithoutControl: the input/textarea is a conditional child of this label
+                      <label key={q.id} className="block">
+                        <span className="mb-1 block text-muted-foreground text-xs">
+                          {q.label}
+                        </span>
+                        {q.kind === "short" ? (
+                          <input
+                            value={
+                              answers[section.id]?.[person.id]?.[q.id] ?? ""
+                            }
+                            onChange={(e) =>
+                              setAnswer(
+                                section.id,
+                                person.id,
+                                q.id,
+                                e.target.value,
+                              )
+                            }
+                            onFocus={() => {
+                              focusedField.current = `${section.id}:${person.id}:${q.id}`;
+                            }}
+                            onBlur={() => {
+                              focusedField.current = null;
+                            }}
+                            placeholder={editable ? q.placeholder : undefined}
+                            disabled={!editable}
+                            className={`${inputCls} disabled:cursor-default disabled:opacity-75`}
+                          />
+                        ) : (
+                          <textarea
+                            value={
+                              answers[section.id]?.[person.id]?.[q.id] ?? ""
+                            }
+                            onChange={(e) =>
+                              setAnswer(
+                                section.id,
+                                person.id,
+                                q.id,
+                                e.target.value,
+                              )
+                            }
+                            onFocus={() => {
+                              focusedField.current = `${section.id}:${person.id}:${q.id}`;
+                            }}
+                            onBlur={() => {
+                              focusedField.current = null;
+                            }}
+                            placeholder={editable ? q.placeholder : undefined}
+                            rows={3}
+                            disabled={!editable}
+                            className={`${inputCls} disabled:cursor-default disabled:opacity-75`}
+                          />
+                        )}
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ),
+              );
+            },
           )}
         </section>
       ))}
@@ -352,6 +466,7 @@ export function MeetingForm({
           value={freeText}
           onChange={(e) => {
             setFreeText(e.target.value);
+            markFreeTextEdited();
             broadcast("freeText", { value: e.target.value });
             scheduleSave();
           }}
